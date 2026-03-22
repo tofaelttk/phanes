@@ -1,0 +1,25 @@
+[package]
+name = "aeos-bulletproofs"
+version = "0.1.0"
+edition = "2021"
+description = "Production Bulletproofs range proofs for AEOS Protocol"
+
+[lib]
+name = "aeos_bulletproofs"
+
+[[bin]]
+name = "aeos-bulletproofs"
+path = "src/main.rs"
+
+[dependencies]
+bulletproofs = "4.0"
+curve25519-dalek-ng = { version = "4", features = ["serde"] }
+merlin = "3"
+rand = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = true
