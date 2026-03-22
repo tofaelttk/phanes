@@ -195,8 +195,8 @@ All cryptography is built on production primitives:
 - [x] MCP server (for Claude/GPT native integration)
 - [x] Settlement hooks (Stripe MPP, USDC on Tempo)
 - [x] Production Bulletproofs (Rust FFI)
-- [ ] Distributed ledger (BFT consensus)
-- [ ] Formal security audit
+- [x] Distributed ledger (BFT consensus)
+- [x] Formal security audit
 
 ## License
 
