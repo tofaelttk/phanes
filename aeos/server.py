@@ -7,7 +7,7 @@ Every protocol operation is exposed as a REST endpoint.
 Run:
     uvicorn aeos.server:app --host 0.0.0.0 --port 8420
     # or
-    phenes-server
+    phanes-server
 
 Endpoints:
     POST   /agents                  Create agent identity
@@ -62,7 +62,7 @@ from .ledger import Ledger, EventType
 
 if not HAS_FASTAPI:
     raise ImportError(
-        "FastAPI not installed. Run: pip install phenes[server]"
+        "FastAPI not installed. Run: pip install phanes[server]"
     )
 
 

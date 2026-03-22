@@ -39,7 +39,7 @@ An AI agent that autonomously operates needs: cryptographic identity, binding co
 ## Quick Start
 
 ```bash
-pip install phenes
+pip install phanes
 ```
 
 ### Create an agent and sign a contract in 10 lines:
@@ -75,8 +75,8 @@ contract.sign(bob)
 ### Run the API server:
 
 ```bash
-pip install phenes[server]
-phenes-server
+pip install phanes[server]
+phanes-server
 # → http://localhost:8420/docs
 ```
 
@@ -204,6 +204,6 @@ Apache 2.0
 
 ## Links
 
-- **Website:** [phenes.app](https://phenes.app)
+- **Website:** [phanes.app](https://phanes.app)
 - **Whitepaper:** [AEOS_Whitepaper_v0.1.pdf](./AEOS_Whitepaper_v0.1.pdf)
-- **API Docs:** Run `phenes-server` → http://localhost:8420/docs
+- **API Docs:** Run `phanes-server` → http://localhost:8420/docs
