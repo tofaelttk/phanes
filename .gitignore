@@ -10,3 +10,10 @@ build/
 venv/
 *.so
 .pytest_cache/
+
+# Rust build artifacts
+bulletproofs/target/
+
+# Node modules & dist
+ts-sdk/node_modules/
+ts-sdk/dist/
