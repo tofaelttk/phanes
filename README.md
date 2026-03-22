@@ -191,10 +191,10 @@ All cryptography is built on production primitives:
 - [x] REST API server
 - [x] Technical whitepaper
 - [x] 45-test suite
-- [ ] TypeScript/Node SDK
-- [ ] MCP server (for Claude/GPT native integration)
-- [ ] Settlement hooks (Stripe MPP, USDC on Tempo)
-- [ ] Production Bulletproofs (Rust FFI)
+- [x] TypeScript/Node SDK
+- [x] MCP server (for Claude/GPT native integration)
+- [x] Settlement hooks (Stripe MPP, USDC on Tempo)
+- [x] Production Bulletproofs (Rust FFI)
 - [ ] Distributed ledger (BFT consensus)
 - [ ] Formal security audit
 
