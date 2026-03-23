@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  aeos:
+    build: .
+    ports:
+      - "8420:8420"
+    volumes:
+      - aeos_data:/app/data
+    environment:
+      - AEOS_DB_PATH=/app/data/aeos.db
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8420/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  aeos_data:

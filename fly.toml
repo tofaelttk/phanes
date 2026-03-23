@@ -1,0 +1,35 @@
+# Fly.io deployment config for AEOS Protocol
+# Deploy: fly launch --copy-config && fly deploy
+# Docs: https://fly.io/docs
+
+app = "phanes-aeos"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  AEOS_DB_PATH = "/app/data/aeos.db"
+  AEOS_HOST = "0.0.0.0"
+  AEOS_PORT = "8420"
+
+[http_service]
+  internal_port = 8420
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 100
+    soft_limit = 80
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+[mounts]
+  source = "aeos_data"
+  destination = "/app/data"
