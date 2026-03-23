@@ -4,7 +4,8 @@
 
 Identity. Contracts. Disputes. Risk. Settlement. Consensus. — Everything an AI agent needs to exist as an economic entity.
 
-[![Tests](https://img.shields.io/badge/tests-67%2F67-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-77%2F77-brightgreen)]()
+[![PyPI](https://img.shields.io/pypi/v/phanes)](https://pypi.org/project/phanes/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![TypeScript](https://img.shields.io/badge/typescript-SDK-blue)]()
 [![Rust](https://img.shields.io/badge/rust-bulletproofs-orange)]()
@@ -20,9 +21,13 @@ But payments are 5% of what an economic actor needs.
 
 When a human starts a business, there's an entire infrastructure: LLC formation, bank accounts, contracts, insurance, compliance, tax filing. For AI agents, none of this exists.
 
-An AI agent that autonomously operates needs: cryptographic identity, binding contracts, escrow with milestone release, dispute resolution when things go wrong, real-time risk management, behavioral anomaly detection, delegation of authority with provable bounds, Byzantine fault tolerant consensus, and an immutable audit trail.
-
 **We built all of it.**
+
+## Install
+
+```bash
+pip install phanes
+```
 
 ## What AEOS Does
 
@@ -38,18 +43,17 @@ An AI agent that autonomously operates needs: cryptographic identity, binding co
 | **Tokenization** | Programmable tokens with decay, staking, accrual, governance | ✅ Complete |
 | **State Channels** | Off-chain micro-transactions, cooperative/force close | ✅ Complete |
 | **BFT Consensus** | PBFT distributed ledger, view changes, quorum certificates | ✅ Complete |
-| **Settlement** | Stripe PaymentIntent escrow, authorize-then-capture, refund on dispute | ✅ Complete |
+| **Stripe Settlement** | PaymentIntent escrow, authorize-then-capture, refund on dispute | ✅ Complete |
+| **USDC Settlement** | On-chain ERC-20 escrow on Ethereum, Base, Arbitrum, Polygon | ✅ Complete |
+| **Persistence** | SQLite WAL-mode, ACID transactions, schema migrations, crash recovery | ✅ Complete |
 | **MCP Server** | 11 tools for Claude/GPT native integration via Model Context Protocol | ✅ Complete |
 | **REST API** | FastAPI server, 17 endpoints | ✅ Complete |
 | **TypeScript SDK** | Full client library with crypto, identity, contracts, typed HTTP client | ✅ Complete |
 | **Bulletproofs** | Rust Ristretto255 zero-knowledge range proofs with Python FFI | ✅ Complete |
+| **Formal Verification** | TLA+ specs for contract escrow and PBFT consensus safety proofs | ✅ Complete |
 | **Ledger** | Append-only hash chain, Merkle proofs, full audit trail | ✅ Complete |
 
 ## Quick Start
-
-```bash
-pip install phanes
-```
 
 ### Create an agent and sign a contract:
 
@@ -100,38 +104,30 @@ phanes-server
 }
 ```
 
-This gives Claude/GPT 11 native tools: `aeos_create_agent`, `aeos_create_contract`, `aeos_sign_contract`, `aeos_fulfill_obligation`, `aeos_file_dispute`, `aeos_resolve_dispute`, `aeos_assess_risk`, and more.
-
-### TypeScript SDK:
-
-```typescript
-import { AgentIdentity, AgentType, Capability, PhanesClient } from "@phanes/sdk";
-
-// Local (no server needed)
-const agent = AgentIdentity.create("did:aeos:corp", AgentType.AUTONOMOUS,
-  [Capability.TRANSACT, Capability.SIGN_CONTRACT],
-  { maxTransactionValue: 100_000_00 });
-
-// Or via HTTP client
-const client = new PhanesClient("http://localhost:8420");
-const created = await client.createAgent({ controllerDid: "did:aeos:corp" });
-```
-
 ### Stripe Settlement:
 
 ```python
 from aeos.settlement import StripeSettlementEngine
 
 engine = StripeSettlementEngine("sk_test_...")
-
-# Create escrow (authorize-only, funds held but not moved)
 result = engine.create_escrow("contract-001", 25000, "usd", "did:alice", "did:bob")
+engine.capture_escrow("contract-001")    # On fulfillment
+engine.refund_escrow("contract-001")     # On dispute
+```
 
-# Obligation fulfilled → capture funds
-engine.capture_escrow("contract-001")
+### USDC On-Chain Settlement:
 
-# Dispute → refund
-engine.refund_escrow("contract-001", reason="non_delivery")
+```python
+from aeos.usdc_settlement import USDCSettlementEngine, Chain
+
+engine = USDCSettlementEngine(chain=Chain.BASE)
+escrow = engine.create_escrow("contract-001", 25000.00,
+    "0xPayerAddress...", "0xPayeeAddress...",
+    payer_did="did:alice", payee_did="did:bob")
+
+approve_tx = engine.build_approve_tx(escrow)   # Payer signs
+lock_tx = engine.build_lock_tx(escrow)         # Lock funds
+release_tx = engine.build_release_tx(escrow)   # Release to payee
 ```
 
 ### BFT Consensus:
@@ -140,20 +136,37 @@ engine.refund_escrow("contract-001", reason="non_delivery")
 from aeos.bft_ledger import DistributedLedger
 
 ledger = DistributedLedger(num_replicas=4)  # Tolerates 1 Byzantine fault
-
 result = ledger.submit({"type": "agent_registered", "did": "did:aeos:alice"})
-assert result["committed"]  # 2f+1 replicas agreed
-
-agent = ledger.query("did:aeos:alice")  # Query replicated state
+assert result["committed"]
 ```
 
-## Run the Full Demo
+### Persistent Storage:
+
+```python
+from aeos.persistence import StorageEngine
+
+db = StorageEngine("aeos_data.db")  # SQLite WAL mode, ACID
+db.put_agent({...})
+db.put_contract({...})
+db.append_ledger(...)  # Immutable, hash-chained
+ok, _ = db.verify_ledger_chain()  # Verify integrity
+```
+
+### Docker Deployment:
 
 ```bash
-git clone https://github.com/tofaelttk/phanes.git
-cd phanes
-pip install -e ".[all]"
-python demo.py
+docker compose up -d
+# → http://localhost:8420/docs
+```
+
+### TypeScript SDK:
+
+```typescript
+import { AgentIdentity, AgentType, Capability, PhanesClient } from "@phanes/sdk";
+
+const agent = AgentIdentity.create("did:aeos:corp", AgentType.AUTONOMOUS,
+  [Capability.TRANSACT, Capability.SIGN_CONTRACT],
+  { maxTransactionValue: 100_000_00 });
 ```
 
 ## Run Tests
@@ -161,8 +174,6 @@ python demo.py
 ```bash
 python tests/test_all.py
 ```
-
-Tests cover all 16 modules across 67 test cases:
 
 ```
 ═══ CRYPTO PRIMITIVES ═══       (9 tests)
@@ -181,10 +192,12 @@ Tests cover all 16 modules across 67 test cases:
 ═══ SETTLEMENT ENGINE ═══       (3 tests)
 ═══ BULLETPROOFS FFI ═══        (2 tests)
 ═══ REST API SERVER ═══         (4 tests)
+═══ PERSISTENCE ENGINE ═══      (5 tests)
+═══ USDC ON-CHAIN SETTLEMENT ══ (5 tests)
 ═══ CROSS-MODULE ═══            (1 test)
 
 ══════════════════════════════════════
-  RESULTS: 67 passed, 0 failed
+  RESULTS: 77 passed, 0 failed
 ══════════════════════════════════════
 ```
 
@@ -202,15 +215,13 @@ Tests cover all 16 modules across 67 test cases:
 ├─────────────────────────────────────────────────────────────┤
 │            Cryptographic Primitives (Ed25519)                │
 ├─────────────────────────────────────────────────────────────┤
-│   BFT Consensus (PBFT)   │   Stripe Settlement Engine      │
+│   BFT Consensus (PBFT)   │   Stripe + USDC Settlement      │
 ├─────────────────────────────────────────────────────────────┤
-│                    Immutable Ledger                          │
+│      Persistent Storage (SQLite WAL)  │  Immutable Ledger   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Cryptographic Foundations
-
-All cryptography is built on production primitives:
 
 - **Signatures:** Ed25519 (RFC 8032) via PyNaCl/cryptography
 - **Commitments:** SHA-256 Pedersen-style with blinding factors
@@ -222,12 +233,13 @@ All cryptography is built on production primitives:
 - **Threshold Sigs:** t-of-n via polynomial evaluation on shares
 - **Range Proofs:** Bulletproofs (Ristretto255, Merlin transcripts) via Rust FFI
 - **Consensus:** PBFT with Ed25519-signed quorum certificates
+- **Formal Verification:** TLA+ specs with safety and liveness proofs
 
 ## Comparison
 
 | Feature | Stripe MPP | Skyfire KYA | Google AP2 | **AEOS** |
 |---|---|---|---|---|
-| Agent payments | ✅ | ✅ | ✅ | ✅ (Stripe) |
+| Agent payments | ✅ | ✅ | ✅ | ✅ (Stripe + USDC) |
 | Agent identity | ❌ | ✅ | Partial | ✅ |
 | Binding contracts | ❌ | ❌ | ❌ | ✅ |
 | Escrow + milestones | ❌ | ❌ | ❌ | ✅ |
@@ -239,6 +251,9 @@ All cryptography is built on production primitives:
 | Graph intelligence | ❌ | ❌ | ❌ | ✅ |
 | BFT consensus | ❌ | ❌ | ❌ | ✅ |
 | Zero-knowledge proofs | ❌ | ❌ | ❌ | ✅ (Bulletproofs) |
+| On-chain settlement | ❌ | ❌ | ❌ | ✅ (USDC multi-chain) |
+| Database persistence | N/A | Unknown | N/A | ✅ (SQLite WAL) |
+| Formal verification | ❌ | ❌ | ❌ | ✅ (TLA+) |
 | MCP integration | ❌ | ❌ | ❌ | ✅ |
 | TypeScript SDK | N/A | ❌ | N/A | ✅ |
 | Security audit | N/A | Unknown | Unknown | ✅ |
@@ -248,7 +263,7 @@ All cryptography is built on production primitives:
 
 ```
 phanes/
-├── aeos/                        # Python protocol (17 modules)
+├── aeos/                        # Python protocol (19 modules)
 │   ├── crypto_primitives.py     # Ed25519, Pedersen, Merkle, VRF, AES-GCM
 │   ├── identity.py              # DID-based identity, delegation, registry
 │   ├── contracts.py             # Multi-sig contracts, escrow, templates
@@ -261,16 +276,21 @@ phanes/
 │   ├── state_channels.py        # Off-chain bilateral channels
 │   ├── ledger.py                # Append-only hash chain
 │   ├── bft_ledger.py            # PBFT consensus (Castro-Liskov 1999)
+│   ├── persistence.py           # SQLite WAL, ACID, schema migrations
 │   ├── settlement.py            # Stripe PaymentIntent escrow
+│   ├── usdc_settlement.py       # On-chain USDC escrow (multi-chain)
 │   ├── mcp_server.py            # MCP server (11 tools, JSON-RPC/stdio)
 │   ├── bulletproofs_ffi.py      # Python→Rust FFI bridge
 │   └── server.py                # FastAPI REST server (17 endpoints)
-├── ts-sdk/                      # TypeScript SDK
-│   ├── src/                     # crypto, identity, contracts, client
-│   └── tests/                   # 22 tests
-├── bulletproofs/                # Rust Bulletproofs
-│   └── src/                     # Ristretto255, Merlin transcripts
-├── tests/test_all.py            # 67 tests across all modules
+├── ts-sdk/                      # TypeScript SDK (22 tests)
+├── bulletproofs/                 # Rust Bulletproofs (13 tests)
+├── formal/                      # TLA+ formal verification specs
+│   ├── AEOSContract.tla         # Contract escrow safety + liveness
+│   └── AEOSPBFT.tla             # PBFT agreement + validity
+├── tests/test_all.py            # 77 tests across all modules
+├── Dockerfile                   # Production deployment
+├── docker-compose.yml           # Local dev with persistent volume
+├── fly.toml                     # Fly.io deployment config
 ├── demo.py                      # End-to-end demonstration
 ├── AEOS_Whitepaper_v0.1.pdf     # Technical whitepaper
 ├── AEOS_Security_Audit_v0.1.pdf # Security audit (STRIDE, 18 findings)
@@ -279,20 +299,24 @@ phanes/
 
 ## Roadmap
 
-- [x] Core protocol (17 modules, 8,000+ lines Python)
+- [x] Core protocol (19 modules, 9,000+ lines Python)
 - [x] REST API server (17 endpoints)
 - [x] Technical whitepaper
-- [x] 67-test suite (all modules covered)
+- [x] 77-test suite (all modules covered)
 - [x] TypeScript/Node SDK (22 tests)
 - [x] MCP server for Claude/GPT (11 tools)
 - [x] Stripe settlement hooks (authorize-capture escrow)
+- [x] USDC on-chain settlement (Ethereum, Base, Arbitrum, Polygon)
 - [x] Production Bulletproofs (Rust FFI, 13 tests)
 - [x] BFT distributed ledger (PBFT, 4–13 node clusters)
+- [x] Database persistence (SQLite WAL, ACID, migrations)
 - [x] Security audit (STRIDE threat model, 18 findings)
-- [ ] Database persistence (currently in-memory)
-- [ ] Hosted deployment
-- [ ] USDC settlement (Tempo/on-chain)
-- [ ] Formal verification (TLA+/Coq)
+- [x] TLA+ formal verification (contract + PBFT safety proofs)
+- [x] Docker + Fly.io deployment configs
+- [x] Published to PyPI (`pip install phanes`)
+- [ ] Hosted public deployment
+- [ ] Formal verification (Coq proofs)
+- [ ] Multi-region BFT deployment
 
 ## License
 
@@ -300,6 +324,7 @@ Apache 2.0
 
 ## Links
 
+- **PyPI:** [pypi.org/project/phanes](https://pypi.org/project/phanes/)
 - **Website:** [phanes.app](https://phanes.app)
 - **Whitepaper:** [AEOS_Whitepaper_v0.1.pdf](./AEOS_Whitepaper_v0.1.pdf)
 - **Security Audit:** [AEOS_Security_Audit_v0.1.pdf](./AEOS_Security_Audit_v0.1.pdf)

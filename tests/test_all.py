@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """AEOS Protocol — Complete Test Suite
 
-Tests all 17 modules:
+Tests all 19 modules:
   crypto_primitives, identity, contracts, disputes, risk, ledger,
   threshold_crypto, tokenization, state_channels, ml_engine,
   graph_intelligence, bft_ledger, mcp_server, settlement,
-  bulletproofs_ffi, server (API)
+  bulletproofs_ffi, server (API), persistence, usdc_settlement
 
 Run: python tests/test_all.py
 """
-import time, sys, json, traceback
+import time, sys, json, traceback, os
 import numpy as np
 sys.path.insert(0, '.')
 
@@ -591,6 +591,155 @@ if HAS_FASTAPI:
 else:
     skipped = 4
     print(f"  ⊘ Skipped 4 server tests (FastAPI not installed — pip install phanes[server])")
+
+# =============================================================================
+# 17. PERSISTENCE ENGINE (5 tests)
+# =============================================================================
+print("\n═══ PERSISTENCE ENGINE ═══")
+
+from aeos.persistence import StorageEngine
+
+@test("Persistence: agent put+get+revoke")
+def _():
+    DB = '/tmp/aeos_test_suite.db'
+    if os.path.exists(DB): os.remove(DB)
+    db = StorageEngine(DB)
+    db.put_agent({'did': 'did:aeos:test1', 'controller_did': 'did:corp',
+        'agent_type': 'AUTONOMOUS', 'capabilities': ['transact'],
+        'bounds': {'max_tx': 100000}, 'public_key': 'abc', 'created_at': time.time()})
+    a = db.get_agent('did:aeos:test1')
+    assert a and a['did'] == 'did:aeos:test1'
+    db.revoke_agent('did:aeos:test1', 'test')
+    a2 = db.get_agent('did:aeos:test1')
+    assert a2['revoked_at'] is not None
+    db.close(); os.remove(DB)
+
+@test("Persistence: contract CRUD + state update")
+def _():
+    DB = '/tmp/aeos_test_suite2.db'
+    if os.path.exists(DB): os.remove(DB)
+    db = StorageEngine(DB)
+    db.put_contract({'contract_id': 'c-test', 'template': 'service',
+        'parties': ['a', 'b'], 'terms': {'price': 5000}, 'terms_hash': 'h1',
+        'state': 'PROPOSED', 'escrow_total': 5000, 'obligations': [],
+        'created_at': time.time()})
+    c = db.get_contract('c-test')
+    assert c['state'] == 'PROPOSED'
+    db.update_contract_state('c-test', 'ACTIVE', activated_at=time.time())
+    c2 = db.get_contract('c-test')
+    assert c2['state'] == 'ACTIVE'
+    db.close(); os.remove(DB)
+
+@test("Persistence: ledger append + chain verify")
+def _():
+    DB = '/tmp/aeos_test_suite3.db'
+    if os.path.exists(DB): os.remove(DB)
+    db = StorageEngine(DB)
+    from aeos.crypto_primitives import sha256 as _sha256
+    prev = '0' * 64
+    for i in range(5):
+        h = _sha256(f'e{i}{prev}'.encode()).hex()
+        db.append_ledger('TEST', 'did:a', f's{i}', {'i': i}, h, prev)
+        prev = h
+    assert db.ledger_count() == 5
+    ok, _ = db.verify_ledger_chain()
+    assert ok
+    db.close(); os.remove(DB)
+
+@test("Persistence: settlement + risk profile")
+def _():
+    DB = '/tmp/aeos_test_suite4.db'
+    if os.path.exists(DB): os.remove(DB)
+    db = StorageEngine(DB)
+    db.put_contract({'contract_id': 'c1', 'template': 't', 'parties': [],
+        'terms': {}, 'terms_hash': 'h', 'obligations': [], 'created_at': time.time()})
+    db.put_settlement({'record_id': 'stl1', 'contract_id': 'c1',
+        'stripe_pi_id': 'pi_test', 'amount': 25000, 'status': 'authorized',
+        'payer_did': 'did:a', 'payee_did': 'did:b', 'created_at': time.time()})
+    assert db.get_settlement('c1')['amount'] == 25000
+    db.put_agent({'did': 'did:a', 'controller_did': 'did:c', 'agent_type': 'A',
+        'capabilities': [], 'bounds': {}, 'public_key': 'x', 'created_at': time.time()})
+    db.put_risk_profile({'agent_did': 'did:a', 'transaction_count': 10,
+        'total_volume': 50000, 'profile_data': {'x': 1}})
+    assert db.get_risk_profile('did:a')['transaction_count'] == 10
+    db.close(); os.remove(DB)
+
+@test("Persistence: stats + WAL mode")
+def _():
+    DB = '/tmp/aeos_test_suite5.db'
+    if os.path.exists(DB): os.remove(DB)
+    db = StorageEngine(DB)
+    db.put_agent({'did': 'did:s1', 'controller_did': 'did:c', 'agent_type': 'A',
+        'capabilities': [], 'bounds': {}, 'public_key': 'x', 'created_at': time.time()})
+    db.put_contract({'contract_id': 'c1', 'template': 't', 'parties': [],
+        'terms': {}, 'terms_hash': 'h', 'obligations': [], 'created_at': time.time()})
+    s = db.stats()
+    assert s['agents'] == 1 and s['contracts'] == 1 and s['db_size_bytes'] > 0
+    db.close(); os.remove(DB)
+
+# =============================================================================
+# 18. USDC ON-CHAIN SETTLEMENT (5 tests)
+# =============================================================================
+print("\n═══ USDC ON-CHAIN SETTLEMENT ═══")
+
+from aeos.usdc_settlement import (
+    USDCSettlementEngine, Chain, EscrowStatus,
+    derive_escrow_address, usdc_to_atomic, atomic_to_usdc,
+    encode_transfer, encode_approve, USDC_ADDRESSES, CHAIN_ID
+)
+
+@test("USDC atomic conversion + chain config")
+def _():
+    assert usdc_to_atomic(25000.00) == 25_000_000_000
+    assert atomic_to_usdc(25_000_000_000) == 25000.00
+    assert CHAIN_ID[Chain.BASE] == 8453
+    assert CHAIN_ID[Chain.ETHEREUM] == 1
+    assert len(USDC_ADDRESSES) == 6
+
+@test("Deterministic escrow address derivation")
+def _():
+    a1 = derive_escrow_address('c-001', Chain.BASE)
+    a2 = derive_escrow_address('c-001', Chain.BASE)
+    a3 = derive_escrow_address('c-002', Chain.BASE)
+    assert a1 == a2  # deterministic
+    assert a1 != a3  # different contract = different address
+    assert a1.startswith('0x') and len(a1) == 42
+
+@test("ABI encoding (transfer, approve, transferFrom)")
+def _():
+    t = encode_transfer('0x' + 'ab' * 20, 1000000)
+    assert t.startswith('0xa9059cbb') and len(t) == 2 + 8 + 64 + 64
+    a = encode_approve('0x' + 'cd' * 20, 5000000)
+    assert a.startswith('0x095ea7b3')
+
+@test("USDC escrow lifecycle (create → lock → release)")
+def _():
+    engine = USDCSettlementEngine(chain=Chain.BASE)
+    escrow = engine.create_escrow('c-001', 25000.00,
+        '0x' + 'aa' * 20, '0x' + 'bb' * 20,
+        payer_did='did:alice', payee_did='did:bob', deadline_hours=24)
+    assert escrow.status == EscrowStatus.PENDING
+    assert escrow.amount_usd == 25000.00
+    # Build transactions
+    approve_tx = engine.build_approve_tx(escrow)
+    assert approve_tx.to == USDC_ADDRESSES[Chain.BASE]
+    lock_tx = engine.build_lock_tx(escrow)
+    assert '23b872dd' in lock_tx.data  # transferFrom
+    release_tx = engine.build_release_tx(escrow)
+    assert 'a9059cbb' in release_tx.data  # transfer
+    # State transitions
+    engine.mark_locked(escrow.escrow_id, '0xtx1')
+    assert escrow.status == EscrowStatus.LOCKED
+    engine.mark_released(escrow.escrow_id, '0xtx2')
+    assert escrow.status == EscrowStatus.RELEASED
+
+@test("USDC multi-chain support")
+def _():
+    for chain in [Chain.ETHEREUM, Chain.BASE, Chain.ARBITRUM, Chain.POLYGON]:
+        e = USDCSettlementEngine(chain=chain)
+        esc = e.create_escrow('test', 100.0, '0x' + 'aa' * 20, '0x' + 'bb' * 20)
+        assert esc.chain == chain
+        assert e.status()['chain'] == chain.value
 
 # =============================================================================
 # Ed25519 SIGNATURE CROSS-MODULE (1 test)
