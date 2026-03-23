@@ -538,56 +538,59 @@ def _():
     assert batch['all_valid']
 
 # =============================================================================
-# 16. REST API SERVER (4 tests)
+# 16. REST API SERVER (4 tests — skipped if FastAPI not installed)
 # =============================================================================
 print("\n═══ REST API SERVER ═══")
 
-@test("Server health endpoint")
-def _():
+try:
     from aeos.server import app
     from starlette.testclient import TestClient
-    client = TestClient(app)
-    r = client.get("/health")
-    assert r.status_code == 200
-    assert r.json()['status'] == 'ok'
+    HAS_FASTAPI = True
+except ImportError:
+    HAS_FASTAPI = False
 
-@test("Server create agent endpoint")
-def _():
-    from aeos.server import app
-    from starlette.testclient import TestClient
-    client = TestClient(app)
-    r = client.post("/agents", json={"controller_did": "did:aeos:test-company"})
-    assert r.status_code in (200, 201)
-    assert r.json()['did'].startswith('did:aeos:')
+if HAS_FASTAPI:
+    @test("Server health endpoint")
+    def _():
+        client = TestClient(app)
+        r = client.get("/health")
+        assert r.status_code == 200
+        assert r.json()['status'] == 'ok'
 
-@test("Server contract creation endpoint")
-def _():
-    from aeos.server import app
-    from starlette.testclient import TestClient
-    client = TestClient(app)
-    a1 = client.post("/agents", json={"controller_did": "did:c1"}).json()
-    a2 = client.post("/agents", json={"controller_did": "did:c2"}).json()
-    r = client.post("/contracts", json={
-        "template": "service_agreement",
-        "client_did": a1['did'], "provider_did": a2['did'],
-        "description": "API test", "price": 100000
-    })
-    assert r.status_code in (200, 201)
-    assert 'contract_id' in r.json()
+    @test("Server create agent endpoint")
+    def _():
+        client = TestClient(app)
+        r = client.post("/agents", json={"controller_did": "did:aeos:test-company"})
+        assert r.status_code in (200, 201)
+        assert r.json()['did'].startswith('did:aeos:')
 
-@test("Server risk assessment endpoint")
-def _():
-    from aeos.server import app
-    from starlette.testclient import TestClient
-    client = TestClient(app)
-    a1 = client.post("/agents", json={"controller_did": "did:r1"}).json()
-    a2 = client.post("/agents", json={"controller_did": "did:r2"}).json()
-    r = client.post("/risk/assess", json={
-        "agent_did": a1['did'], "counterparty_did": a2['did'],
-        "value": 50000, "tx_type": "purchase"
-    })
-    assert r.status_code == 200
-    assert 'risk_score' in r.json()
+    @test("Server contract creation endpoint")
+    def _():
+        client = TestClient(app)
+        a1 = client.post("/agents", json={"controller_did": "did:c1"}).json()
+        a2 = client.post("/agents", json={"controller_did": "did:c2"}).json()
+        r = client.post("/contracts", json={
+            "template": "service_agreement",
+            "client_did": a1['did'], "provider_did": a2['did'],
+            "description": "API test", "price": 100000
+        })
+        assert r.status_code in (200, 201)
+        assert 'contract_id' in r.json()
+
+    @test("Server risk assessment endpoint")
+    def _():
+        client = TestClient(app)
+        a1 = client.post("/agents", json={"controller_did": "did:r1"}).json()
+        a2 = client.post("/agents", json={"controller_did": "did:r2"}).json()
+        r = client.post("/risk/assess", json={
+            "agent_did": a1['did'], "counterparty_did": a2['did'],
+            "value": 50000, "tx_type": "purchase"
+        })
+        assert r.status_code == 200
+        assert 'risk_score' in r.json()
+else:
+    skipped = 4
+    print(f"  ⊘ Skipped 4 server tests (FastAPI not installed — pip install phanes[server])")
 
 # =============================================================================
 # Ed25519 SIGNATURE CROSS-MODULE (1 test)
@@ -609,8 +612,13 @@ def _():
 # =============================================================================
 # RESULTS
 # =============================================================================
+skipped_count = 0 if HAS_FASTAPI else 4
+total = passed + failed
 print(f"\n{'='*70}")
-print(f"  RESULTS: {passed} passed, {failed} failed, {passed+failed} total")
+if skipped_count:
+    print(f"  RESULTS: {passed} passed, {failed} failed, {skipped_count} skipped, {total + skipped_count} total")
+else:
+    print(f"  RESULTS: {passed} passed, {failed} failed, {total} total")
 print(f"{'='*70}")
 if errors:
     print("\nFAILED:")

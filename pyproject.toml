@@ -10,7 +10,7 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 authors = [
-    { name = "Phenes Labs" },
+    { name = "Phanes Labs" },
 ]
 keywords = [
     "ai-agents", "autonomous-agents", "machine-economy", "agent-identity",
@@ -39,6 +39,9 @@ server = [
     "uvicorn>=0.29.0",
     "pydantic>=2.0.0",
 ]
+settlement = [
+    "stripe>=9.0.0",
+]
 ml = [
     "scikit-learn>=1.4.0",
     "scipy>=1.12.0",
@@ -48,7 +51,7 @@ dev = [
     "pytest>=8.0.0",
     "httpx>=0.27.0",
 ]
-all = ["phanes[server,ml,dev]"]
+all = ["phanes[server,settlement,ml,dev]"]
 
 [project.urls]
 Homepage = "https://phanes.app"
@@ -57,6 +60,7 @@ Documentation = "https://github.com/tofaelttk/Phanes/blob/main/README.md"
 
 [project.scripts]
 phanes-server = "aeos.server:main"
+phanes-mcp = "aeos.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["aeos"]
