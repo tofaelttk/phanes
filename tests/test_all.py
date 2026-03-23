@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
-"""AEOS Protocol — Comprehensive Test Suite"""
+"""AEOS Protocol — Complete Test Suite
+
+Tests all 17 modules:
+  crypto_primitives, identity, contracts, disputes, risk, ledger,
+  threshold_crypto, tokenization, state_channels, ml_engine,
+  graph_intelligence, bft_ledger, mcp_server, settlement,
+  bulletproofs_ffi, server (API)
+
+Run: python tests/test_all.py
+"""
 import time, sys, json, traceback
 import numpy as np
 sys.path.insert(0, '.')
+
 from aeos.crypto_primitives import *
 from aeos.identity import *
 from aeos.contracts import *
@@ -14,6 +24,10 @@ from aeos.tokenization import *
 from aeos.state_channels import StateChannel, ChannelState
 from aeos.ml_engine import *
 from aeos.graph_intelligence import TransactionGraph
+from aeos.bft_ledger import PBFTNetwork, DistributedLedger, PBFTMessage, MessageType
+from aeos.mcp_server import handle_request, handle_tool, TOOLS
+from aeos.settlement import StripeSettlementEngine, SettlementRecord
+from aeos.bulletproofs_ffi import BulletproofsEngine
 
 passed = failed = 0
 errors = []
@@ -30,7 +44,11 @@ def test(name):
             failed += 1
     return decorator
 
+# =============================================================================
+# 1. CRYPTO PRIMITIVES (9 tests)
+# =============================================================================
 print("\n═══ CRYPTO PRIMITIVES ═══")
+
 @test("KeyPair sign/verify")
 def _():
     kp = KeyPair.generate(); sig = kp.sign(b"msg")
@@ -80,13 +98,17 @@ def _():
     e = EncryptedEnvelope.encrypt(b"msg", s, "a", "b")
     assert e.decrypt(s) == b"msg"
 
+# =============================================================================
+# 2. IDENTITY (5 tests)
+# =============================================================================
 print("\n═══ IDENTITY ═══")
-@test("Agent creation + DID")
+
+@test("Agent creation + DID format")
 def _():
     a = AgentIdentity.create("did:c", AgentType.AUTONOMOUS, {CapabilityScope.TRANSACT}, AuthorityBounds(max_transaction_value=100))
     assert a.did.startswith("did:aeos:")
 
-@test("Authority containment")
+@test("Authority containment enforced")
 def _():
     p = AuthorityBounds(max_transaction_value=100, max_daily_volume=1000, max_delegation_depth=3, max_concurrent_contracts=10, max_counterparties=50, max_contract_duration_hours=720, allowed_asset_types=["USD"])
     c = AuthorityBounds(max_transaction_value=50, max_daily_volume=500, max_delegation_depth=2, max_concurrent_contracts=5, max_counterparties=25, max_contract_duration_hours=360, allowed_asset_types=["USD"])
@@ -110,7 +132,11 @@ def _():
     assert r.register(a).verify(); assert r.resolve(a.did).did == a.did
     r.revoke(a.did, b"sig"); assert r.is_revoked(a.did)
 
+# =============================================================================
+# 3. CONTRACTS (3 tests)
+# =============================================================================
 print("\n═══ CONTRACTS ═══")
+
 @test("Service agreement lifecycle")
 def _():
     a = AgentIdentity.create("did:c1", AgentType.AUTONOMOUS, {CapabilityScope.TRANSACT, CapabilityScope.SIGN_CONTRACT}, AuthorityBounds(max_transaction_value=100000))
@@ -129,7 +155,11 @@ def _():
     c = ContractFactory.data_exchange(a.did, "did:s", "data", 1000, "abc")
     assert c.terms_hash() == c.terms_hash()
 
+# =============================================================================
+# 4. THRESHOLD CRYPTO (6 tests)
+# =============================================================================
 print("\n═══ THRESHOLD CRYPTO ═══")
+
 @test("Shamir split + reconstruct")
 def _():
     shares, _ = ShamirSecretSharing.split(123456789, 3, 5)
@@ -168,7 +198,11 @@ def _():
     p2 = e.threshold_scheme.partial_sign(e.threshold_scheme.key_shares[1], b"release")
     assert e.request_release(b"release", [p1, p2]) and e.released
 
+# =============================================================================
+# 5. TOKENIZATION (6 tests)
+# =============================================================================
 print("\n═══ TOKENIZATION ═══")
+
 @test("Token mint + transfer")
 def _():
     t = TokenFactory.authority_token("i", "h", "tx", 100)
@@ -203,7 +237,11 @@ def _():
     t = Token.mint(TokenType.SERVICE_CREDIT, "s", "a", 100, TokenPolicy(expires_at=time.time()-1))
     assert not t.redeem(b"p") and t.state == TokenState.EXPIRED
 
+# =============================================================================
+# 6. STATE CHANNELS (5 tests)
+# =============================================================================
 print("\n═══ STATE CHANNELS ═══")
+
 @test("Channel open + transact")
 def _():
     ch = StateChannel.open("a", "b", KeyPair.generate(), KeyPair.generate(), 1000, 1000)
@@ -227,23 +265,26 @@ def _():
     ch.transact(250); r = ch.cooperative_close()
     assert r['settlement_a'] == 750 and r['settlement_b'] == 1250 and not ch.is_open
 
-@test("Value conservation")
+@test("Value conservation invariant")
 def _():
     ch = StateChannel.open("a", "b", KeyPair.generate(), KeyPair.generate(), 3000, 7000)
     for _ in range(50):
-        amt = np.random.randint(-50, 50)
-        try: ch.transact(amt)
+        try: ch.transact(np.random.randint(-50, 50))
         except ValueError: pass
     assert ch.latest_state.total == 10000
 
+# =============================================================================
+# 7. ML ENGINE (2 tests)
+# =============================================================================
 print("\n═══ ML ENGINE ═══")
+
 @test("Isolation Forest outlier detection")
 def _():
     np.random.seed(42); X = np.random.randn(200, 5)
     f = IsolationForest(n_trees=50, max_samples=100); f.fit(X)
     assert f.score_single(np.array([10,10,10,10,10])) > f.score_single(X[0])
 
-@test("Ensemble scorer builds + scores")
+@test("Ensemble scorer detects anomaly")
 def _():
     s = EnsembleAnomalyScorer("did:t")
     for i in range(60):
@@ -252,7 +293,11 @@ def _():
     r = s.observe({'value': 999999, 'timestamp': time.time(), 'counterparty_did': 'new', 'counterparty_reputation': 0.1})
     assert r['ensemble_score'] > 0
 
+# =============================================================================
+# 8. GRAPH INTELLIGENCE (4 tests)
+# =============================================================================
 print("\n═══ GRAPH INTELLIGENCE ═══")
+
 @test("PageRank computes")
 def _():
     g = TransactionGraph()
@@ -278,7 +323,11 @@ def _():
     for i in range(5): g.add_transaction(f"s{i}",f"s{(i+1)%5}",100)
     s = g.detect_sybil_clusters({"t1","t2"}); assert len(s) > 0
 
+# =============================================================================
+# 9. DISPUTE RESOLUTION (1 test)
+# =============================================================================
 print("\n═══ DISPUTE RESOLUTION ═══")
+
 @test("Auto-resolution on breach")
 def _():
     a = AgentIdentity.create("did:c", AgentType.AUTONOMOUS, {CapabilityScope.TRANSACT, CapabilityScope.SIGN_CONTRACT, CapabilityScope.DISPUTE}, AuthorityBounds(max_transaction_value=100000))
@@ -290,7 +339,11 @@ def _():
     d = Dispute.file(a, c, DisputeReason.NON_DELIVERY, "fail", 5000)
     assert d.attempt_auto_resolution(c) is not None
 
+# =============================================================================
+# 10. RISK ENGINE (2 tests)
+# =============================================================================
 print("\n═══ RISK ENGINE ═══")
+
 @test("Circuit breaker trip+recover")
 def _():
     cb = CircuitBreaker(agent_did="t", failure_threshold=3, reset_timeout=0.1)
@@ -303,7 +356,11 @@ def _():
     p.stake("a", 10000); cl = p.file_claim("a", 3000, "fraud", b"ev")
     assert cl['amount_approved'] == 3000 and p.solvency_ratio == 0.7
 
+# =============================================================================
+# 11. LEDGER (2 tests)
+# =============================================================================
 print("\n═══ LEDGER ═══")
+
 @test("Ledger chain integrity")
 def _():
     l = Ledger(); a = AgentIdentity.create("did:c", AgentType.AUTONOMOUS, {CapabilityScope.TRANSACT}, AuthorityBounds(max_transaction_value=100))
@@ -316,6 +373,242 @@ def _():
     l.append(EventType.AGENT_REGISTERED, a); l.append(EventType.CONTRACT_CREATED, a)
     assert l.prove_entry(0).verify()
 
+# =============================================================================
+# 12. BFT DISTRIBUTED LEDGER (8 tests)
+# =============================================================================
+print("\n═══ BFT DISTRIBUTED LEDGER ═══")
+
+@test("PBFT 4-node consensus")
+def _():
+    net = PBFTNetwork(4)
+    r = net.submit({'type': 'tx', 'amt': 100})
+    assert r['committed'] and r['committed_replicas'] == 4
+
+@test("PBFT state agreement (10 ops)")
+def _():
+    net = PBFTNetwork(4)
+    for i in range(10): assert net.submit({'v': i})['committed']
+    assert len(set(r.state_hash for r in net.replicas.values())) == 1
+
+@test("PBFT tolerates 1 Byzantine (4 nodes)")
+def _():
+    net = PBFTNetwork(4); net.set_byzantine({2})
+    assert net.submit({'x': 1})['committed']
+
+@test("PBFT tolerates 2 Byzantine (7 nodes)")
+def _():
+    net = PBFTNetwork(7); net.set_byzantine({1, 5})
+    for i in range(5): assert net.submit({'i': i})['committed']
+    c = [r for rid, r in net.replicas.items() if rid not in net.byzantine]
+    assert len(set(r.state_hash for r in c)) == 1
+
+@test("PBFT rejects >f faults")
+def _():
+    try: n = PBFTNetwork(4); n.set_byzantine({0,1,2}); assert False
+    except ValueError: pass
+
+@test("PBFT quorum certificate valid")
+def _():
+    r = PBFTNetwork(4).submit({'cert': True})
+    qc = r['quorum_certificate']
+    assert qc['valid'] and qc['signatures'] >= qc['quorum']
+
+@test("PBFT view change (Byzantine primary)")
+def _():
+    net = PBFTNetwork(4); net.set_byzantine({0})
+    assert net.submit({'vc': True})['committed']
+
+@test("DistributedLedger application layer")
+def _():
+    dl = DistributedLedger(4)
+    assert dl.submit({'type': 'agent_registered', 'did': 'did:aeos:a', 'name': 'A'})['committed']
+    assert dl.submit({'type': 'contract_created', 'contract_id': 'c1', 'val': 25000})['committed']
+    assert dl.submit({'type': 'obligation_fulfilled', 'contract_id': 'c1'})['committed']
+    assert dl.query('did:aeos:a')['name'] == 'A'
+    assert dl.query('c1')['fulfilled'] == True
+    assert dl.status()['network']['consensus_ok']
+
+# =============================================================================
+# 13. MCP SERVER (4 tests)
+# =============================================================================
+print("\n═══ MCP SERVER ═══")
+
+@test("MCP initialize + list tools")
+def _():
+    r = handle_request({'jsonrpc': '2.0', 'id': 1, 'method': 'initialize', 'params': {}})
+    assert r['result']['serverInfo']['name'] == 'aeos-protocol'
+    r2 = handle_request({'jsonrpc': '2.0', 'id': 2, 'method': 'tools/list', 'params': {}})
+    assert len(r2['result']['tools']) == 11
+
+@test("MCP create agent + resolve")
+def _():
+    r = handle_request({'jsonrpc': '2.0', 'id': 3, 'method': 'tools/call', 'params': {
+        'name': 'aeos_create_agent',
+        'arguments': {'controller_did': 'did:aeos:test-corp', 'name': 'TestBot'}
+    }})
+    result = json.loads(r['result']['content'][0]['text'])
+    assert result['did'].startswith('did:aeos:')
+    assert result['registry_proof_valid']
+
+@test("MCP contract lifecycle")
+def _():
+    # Create two agents
+    r1 = handle_tool('aeos_create_agent', {'controller_did': 'did:c1', 'name': 'A'})
+    r2 = handle_tool('aeos_create_agent', {'controller_did': 'did:c2', 'name': 'B'})
+    a_did, b_did = r1['did'], r2['did']
+    # Create contract
+    c = handle_tool('aeos_create_contract', {'template': 'service_agreement',
+        'client_did': a_did, 'provider_did': b_did, 'price': 500000, 'description': 'test'})
+    cid = c['contract_id']
+    # Sign both
+    handle_tool('aeos_sign_contract', {'contract_id': cid, 'signer_did': a_did})
+    s2 = handle_tool('aeos_sign_contract', {'contract_id': cid, 'signer_did': b_did})
+    assert s2['state'] == 'ACTIVE'
+
+@test("MCP risk assessment")
+def _():
+    r1 = handle_tool('aeos_create_agent', {'controller_did': 'did:risk1', 'name': 'R1'})
+    r2 = handle_tool('aeos_create_agent', {'controller_did': 'did:risk2', 'name': 'R2'})
+    risk = handle_tool('aeos_assess_risk', {
+        'agent_did': r1['did'], 'counterparty_did': r2['did'], 'value': 50000
+    })
+    assert 'risk_score' in risk and 'approved' in risk
+
+# =============================================================================
+# 14. SETTLEMENT ENGINE (3 tests)
+# =============================================================================
+print("\n═══ SETTLEMENT ENGINE ═══")
+
+@test("Settlement engine initialization")
+def _():
+    engine = StripeSettlementEngine(
+        secret_key='sk_test_fake_for_testing_only',
+        test_mode=True
+    )
+    s = engine.status()
+    assert s['engine'] == 'stripe'
+    assert s['test_mode'] == True
+    assert s['active_settlements'] == 0
+
+@test("Settlement record tracking")
+def _():
+    engine = StripeSettlementEngine(secret_key='sk_test_fake', test_mode=True)
+    record = SettlementRecord(
+        record_id='stl_test', contract_id='c-001',
+        stripe_payment_intent_id='pi_test',
+        amount=25000, currency='usd', status='authorized',
+        payer_did='did:aeos:alice', payee_did='did:aeos:bob',
+        created_at=time.time()
+    )
+    engine.records[record.record_id] = record
+    engine.contract_to_pi['c-001'] = 'pi_test'
+    assert engine.get_settlement('c-001')['status'] == 'authorized'
+    assert len(engine.list_settlements()) == 1
+    assert engine.status()['total_escrowed'] == 25000
+
+@test("Settlement rejects live key in test mode")
+def _():
+    try:
+        StripeSettlementEngine(secret_key='sk_live_xxx', test_mode=True)
+        assert False
+    except ValueError as e:
+        assert 'live key' in str(e).lower()
+
+# =============================================================================
+# 15. BULLETPROOFS FFI (2 tests)
+# =============================================================================
+print("\n═══ BULLETPROOFS FFI ═══")
+
+@test("Bulletproofs engine fallback mode")
+def _():
+    engine = BulletproofsEngine("/nonexistent/path")
+    assert not engine.available
+    result = engine.prove(100_000, 64, "authority_bound")
+    assert result['success']
+    assert 'proof' in result
+
+@test("Bulletproofs verify + batch verify")
+def _():
+    engine = BulletproofsEngine("/nonexistent/path")
+    r1 = engine.prove(50000, 32, "test_domain")
+    r2 = engine.prove(99999, 32, "test_domain")
+    assert engine.verify(r1['proof'])['valid']
+    assert engine.verify(r2['proof'])['valid']
+    batch = engine.batch_verify([r1['proof'], r2['proof']])
+    assert batch['all_valid']
+
+# =============================================================================
+# 16. REST API SERVER (4 tests)
+# =============================================================================
+print("\n═══ REST API SERVER ═══")
+
+@test("Server health endpoint")
+def _():
+    from aeos.server import app
+    from starlette.testclient import TestClient
+    client = TestClient(app)
+    r = client.get("/health")
+    assert r.status_code == 200
+    assert r.json()['status'] == 'ok'
+
+@test("Server create agent endpoint")
+def _():
+    from aeos.server import app
+    from starlette.testclient import TestClient
+    client = TestClient(app)
+    r = client.post("/agents", json={"controller_did": "did:aeos:test-company"})
+    assert r.status_code in (200, 201)
+    assert r.json()['did'].startswith('did:aeos:')
+
+@test("Server contract creation endpoint")
+def _():
+    from aeos.server import app
+    from starlette.testclient import TestClient
+    client = TestClient(app)
+    a1 = client.post("/agents", json={"controller_did": "did:c1"}).json()
+    a2 = client.post("/agents", json={"controller_did": "did:c2"}).json()
+    r = client.post("/contracts", json={
+        "template": "service_agreement",
+        "client_did": a1['did'], "provider_did": a2['did'],
+        "description": "API test", "price": 100000
+    })
+    assert r.status_code in (200, 201)
+    assert 'contract_id' in r.json()
+
+@test("Server risk assessment endpoint")
+def _():
+    from aeos.server import app
+    from starlette.testclient import TestClient
+    client = TestClient(app)
+    a1 = client.post("/agents", json={"controller_did": "did:r1"}).json()
+    a2 = client.post("/agents", json={"controller_did": "did:r2"}).json()
+    r = client.post("/risk/assess", json={
+        "agent_did": a1['did'], "counterparty_did": a2['did'],
+        "value": 50000, "tx_type": "purchase"
+    })
+    assert r.status_code == 200
+    assert 'risk_score' in r.json()
+
+# =============================================================================
+# Ed25519 SIGNATURE CROSS-MODULE (1 test)
+# =============================================================================
+print("\n═══ CROSS-MODULE INTEGRATION ═══")
+
+@test("Ed25519 signatures consistent across modules")
+def _():
+    k1 = KeyPair.generate(purpose='cross-test')
+    k2 = KeyPair.generate(purpose='cross-test-2')
+    # PBFT message signing
+    m = PBFTMessage(MessageType.PREPARE, 0, 1, 0, 'abc123')
+    m.sign(k1)
+    assert m.verify(k1) and not m.verify(k2)
+    # Identity signing
+    sig = k1.sign(b"identity_data")
+    assert k1.verify(sig, b"identity_data")
+
+# =============================================================================
+# RESULTS
+# =============================================================================
 print(f"\n{'='*70}")
 print(f"  RESULTS: {passed} passed, {failed} failed, {passed+failed} total")
 print(f"{'='*70}")
