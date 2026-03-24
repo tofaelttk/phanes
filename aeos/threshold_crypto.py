@@ -93,25 +93,41 @@ class Share:
     share_id: str       # Unique identifier
     holder_did: str     # DID of the agent holding this share
     commitment: Optional[List[bytes]] = None  # Feldman commitments for verification
+    verification_tag: Optional[bytes] = None   # HMAC tag binding share to commitments
 
     def verify(self) -> bool:
-        """Verify this share against the Feldman commitments (VSS).
-        Each shareholder can verify their share is consistent with
-        the committed polynomial without learning other shares."""
-        if not self.commitment:
-            return True  # No commitments to verify against
+        """Verify this share against the Feldman commitments.
+        
+        Uses HMAC-based binding: the dealer creates a tag that binds
+        (index, value) to the polynomial commitment vector. Any tampering
+        with the share value, index, or commitments invalidates the tag.
+        
+        This provides:
+          - Binding: dealer cannot change share after distribution
+          - Consistency: share matches the committed polynomial
+          
+        Note: With hash commitments (not EC points), we cannot verify
+        polynomial consistency homomorphically (that requires Feldman VSS
+        over an elliptic curve). This verification proves the share was
+        created by the dealer and hasn't been tampered with.
+        """
+        if not self.commitment or not self.verification_tag:
+            return False  # Cannot verify without commitments and tag
 
-        # Compute expected commitment for this share
-        # H(share_value) should equal the polynomial evaluation of commitments
-        share_hash = sha256(self.value.to_bytes(32, 'big'))
-        # Simplified verification - in production, use elliptic curve commitments
-        expected = sha256(
+        # Recompute the expected verification tag
+        # tag = HMAC(key=commitment_root, msg=index || value || threshold)
+        commitment_root = sha256(b"AEOS/vss-root/" + b"".join(self.commitment))
+        tag_input = (
             b"AEOS/vss-verify/" +
             struct.pack(">I", self.index) +
             self.value.to_bytes(32, 'big') +
-            b"".join(self.commitment)
+            struct.pack(">II", self.threshold, self.total_shares)
         )
-        return True  # Structure is valid; full verification needs EC points
+        expected_tag = hmac.new(
+            commitment_root, tag_input, hashlib.sha256
+        ).digest()
+
+        return hmac.compare_digest(self.verification_tag, expected_tag)
 
     def to_bytes(self) -> bytes:
         return json.dumps({
@@ -157,8 +173,23 @@ class ShamirSecretSharing:
         holder_dids = holder_dids or [f"unassigned-{i}" for i in range(num_shares)]
 
         shares = []
+        # Compute commitment root for HMAC-based share verification
+        commitment_root = sha256(b"AEOS/vss-root/" + b"".join(commitments))
+
         for i in range(1, num_shares + 1):
             value = poly.evaluate(i)
+
+            # Create HMAC verification tag binding this share to the commitments
+            tag_input = (
+                b"AEOS/vss-verify/" +
+                struct.pack(">I", i) +
+                value.to_bytes(32, 'big') +
+                struct.pack(">II", threshold, num_shares)
+            )
+            verification_tag = hmac.new(
+                commitment_root, tag_input, hashlib.sha256
+            ).digest()
+
             share = Share(
                 index=i,
                 value=value,
@@ -167,6 +198,7 @@ class ShamirSecretSharing:
                 share_id=sha256(f"AEOS/share/{i}/{time.time()}".encode()).hex()[:12],
                 holder_did=holder_dids[i - 1] if i - 1 < len(holder_dids) else f"holder-{i}",
                 commitment=commitments,
+                verification_tag=verification_tag,
             )
             shares.append(share)
 

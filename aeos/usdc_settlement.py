@@ -436,3 +436,135 @@ class USDCSettlementEngine:
                 if e.status == EscrowStatus.RELEASED
             ),
         }
+
+
+# =============================================================================
+# WEB3 CHAIN CLIENT (requires web3.py)
+# =============================================================================
+
+class ChainClient:
+    """Actual on-chain interaction via web3.py.
+    
+    This bridges the gap between USDCSettlementEngine (which builds
+    unsigned transactions) and the actual blockchain. It can:
+    
+    1. Check USDC balances for any address
+    2. Check allowances (how much an address has approved for spending)
+    3. Send signed transactions and wait for confirmation
+    4. Verify transaction receipts
+    
+    Install: pip install web3
+    
+    Usage:
+        client = ChainClient(Chain.BASE_SEPOLIA, private_key="0x...")
+        balance = client.get_usdc_balance("0xAddress...")
+        tx_hash = client.execute_transaction(unsigned_tx)
+        receipt = client.wait_for_receipt(tx_hash)
+    """
+
+    def __init__(self, chain: Chain, private_key: Optional[str] = None,
+                 rpc_url: Optional[str] = None):
+        try:
+            from web3 import Web3
+            self._Web3 = Web3
+        except ImportError:
+            raise ImportError(
+                "web3 package not installed. Run: pip install web3\n"
+                "ChainClient requires web3.py for on-chain interaction."
+            )
+
+        self.chain = chain
+        self.rpc_url = rpc_url or CHAIN_RPC[chain]
+        self.w3 = self._Web3(self._Web3.HTTPProvider(self.rpc_url))
+        self.usdc_address = self._Web3.to_checksum_address(USDC_ADDRESSES[chain])
+        self.chain_id = CHAIN_ID[chain]
+
+        # ERC-20 contract interface
+        self.usdc = self.w3.eth.contract(
+            address=self.usdc_address, abi=ERC20_ABI
+        )
+
+        # Signing key (optional — needed for sending transactions)
+        self.account = None
+        if private_key:
+            self.account = self.w3.eth.account.from_key(private_key)
+
+    @property
+    def connected(self) -> bool:
+        try:
+            return self.w3.is_connected()
+        except Exception:
+            return False
+
+    def get_usdc_balance(self, address: str) -> float:
+        """Get USDC balance for an address. Returns amount in USD."""
+        addr = self._Web3.to_checksum_address(address)
+        raw = self.usdc.functions.balanceOf(addr).call()
+        return atomic_to_usdc(raw)
+
+    def get_allowance(self, owner: str, spender: str) -> float:
+        """Get USDC allowance (how much spender can transfer from owner)."""
+        owner_addr = self._Web3.to_checksum_address(owner)
+        spender_addr = self._Web3.to_checksum_address(spender)
+        raw = self.usdc.functions.allowance(owner_addr, spender_addr).call()
+        return atomic_to_usdc(raw)
+
+    def execute_transaction(self, unsigned_tx: UnsignedTransaction,
+                             gas_price_gwei: Optional[float] = None) -> str:
+        """Sign and send a transaction. Returns transaction hash.
+        
+        Requires private_key to be set in constructor.
+        """
+        if not self.account:
+            raise ValueError("No private key configured. Cannot sign transactions.")
+
+        # Build the transaction dict
+        nonce = self.w3.eth.get_transaction_count(self.account.address)
+        tx_dict = {
+            'to': self._Web3.to_checksum_address(unsigned_tx.to),
+            'data': unsigned_tx.data,
+            'value': unsigned_tx.value,
+            'gas': unsigned_tx.gas_limit,
+            'nonce': nonce,
+            'chainId': self.chain_id,
+        }
+
+        # Gas pricing
+        if gas_price_gwei:
+            tx_dict['gasPrice'] = self._Web3.to_wei(gas_price_gwei, 'gwei')
+        else:
+            # Use EIP-1559 if supported
+            try:
+                base_fee = self.w3.eth.get_block('latest')['baseFeePerGas']
+                tx_dict['maxFeePerGas'] = base_fee * 2
+                tx_dict['maxPriorityFeePerGas'] = self._Web3.to_wei(1, 'gwei')
+            except Exception:
+                tx_dict['gasPrice'] = self.w3.eth.gas_price
+
+        # Sign and send
+        signed = self.w3.eth.account.sign_transaction(tx_dict, self.account.key)
+        tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
+        return tx_hash.hex()
+
+    def wait_for_receipt(self, tx_hash: str, timeout: int = 120) -> Dict[str, Any]:
+        """Wait for transaction confirmation. Returns receipt."""
+        receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=timeout)
+        return {
+            'tx_hash': tx_hash,
+            'block_number': receipt['blockNumber'],
+            'gas_used': receipt['gasUsed'],
+            'status': 'success' if receipt['status'] == 1 else 'failed',
+        }
+
+    def get_block_number(self) -> int:
+        return self.w3.eth.block_number
+
+    def status(self) -> Dict[str, Any]:
+        return {
+            'chain': self.chain.value,
+            'rpc': self.rpc_url,
+            'connected': self.connected,
+            'block': self.get_block_number() if self.connected else None,
+            'has_signer': self.account is not None,
+            'signer_address': self.account.address if self.account else None,
+        }

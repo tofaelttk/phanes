@@ -66,14 +66,31 @@ def _():
     assert c.verify(b"secret") and not c.verify(b"wrong")
     assert Commitment.create(b"secret").value_hash != c.value_hash
 
-@test("Range proof valid")
+@test("Range proof valid + Fiat-Shamir verification")
 def _():
-    p, _ = RangeProof.create(42, 8); assert p.verify_structure()
+    p, _ = RangeProof.create(42, 8)
+    assert p.verify()  # Real cryptographic verification, not just length check
 
 @test("Range proof rejects out-of-range")
 def _():
     try: RangeProof.create(256, 8); assert False
     except ValueError: pass
+
+@test("Range proof rejects tampered challenge")
+def _():
+    import copy
+    p, _ = RangeProof.create(100, 8)
+    bad = copy.deepcopy(p)
+    bad.challenge = b'\x00' * 32
+    assert not bad.verify()
+
+@test("Range proof rejects tampered bit proof")
+def _():
+    import copy
+    p, _ = RangeProof.create(100, 8)
+    bad = copy.deepcopy(p)
+    bad.bit_proofs[0] = b'\xff' * 32
+    assert not bad.verify()
 
 @test("Merkle accumulator prove/verify")
 def _():
@@ -164,6 +181,28 @@ print("\n═══ THRESHOLD CRYPTO ═══")
 def _():
     shares, _ = ShamirSecretSharing.split(123456789, 3, 5)
     assert ShamirSecretSharing.reconstruct(shares[:3]) == 123456789
+
+@test("VSS share verification (HMAC binding)")
+def _():
+    shares, _ = ShamirSecretSharing.split(999, 3, 5)
+    for s in shares:
+        assert s.verify(), f"Share {s.index} should verify"
+
+@test("VSS rejects tampered share value")
+def _():
+    import copy
+    shares, _ = ShamirSecretSharing.split(42, 3, 5)
+    bad = copy.deepcopy(shares[0])
+    bad.value = 999999
+    assert not bad.verify()
+
+@test("VSS rejects tampered index")
+def _():
+    import copy
+    shares, _ = ShamirSecretSharing.split(42, 3, 5)
+    bad = copy.deepcopy(shares[0])
+    bad.index = 99
+    assert not bad.verify()
 
 @test("Any t shares work")
 def _():
@@ -519,19 +558,31 @@ def _():
 # =============================================================================
 print("\n═══ BULLETPROOFS FFI ═══")
 
-@test("Bulletproofs engine fallback mode")
+@test("Bulletproofs fallback: real Fiat-Shamir verification")
 def _():
     engine = BulletproofsEngine("/nonexistent/path")
     assert not engine.available
     result = engine.prove(100_000, 64, "authority_bound")
     assert result['success']
-    assert 'proof' in result
+    v = engine.verify(result['proof'])
+    assert v['valid']
 
-@test("Bulletproofs verify + batch verify")
+@test("Bulletproofs fallback: tampered proof rejected")
 def _():
     engine = BulletproofsEngine("/nonexistent/path")
-    r1 = engine.prove(50000, 32, "test_domain")
-    r2 = engine.prove(99999, 32, "test_domain")
+    result = engine.prove(50000, 32, "test")
+    # Tamper with the challenge
+    bad_proof = dict(result['proof'])
+    bad_proof['challenge'] = '00' * 32
+    bad_proof.pop('_proof_object', None)
+    v = engine.verify(bad_proof)
+    assert not v['valid']
+
+@test("Bulletproofs batch verify")
+def _():
+    engine = BulletproofsEngine("/nonexistent/path")
+    r1 = engine.prove(50000, 32, "d1")
+    r2 = engine.prove(99999, 32, "d2")
     assert engine.verify(r1['proof'])['valid']
     assert engine.verify(r2['proof'])['valid']
     batch = engine.batch_verify([r1['proof'], r2['proof']])
@@ -740,6 +791,15 @@ def _():
         esc = e.create_escrow('test', 100.0, '0x' + 'aa' * 20, '0x' + 'bb' * 20)
         assert esc.chain == chain
         assert e.status()['chain'] == chain.value
+
+@test("USDC ChainClient requires web3")
+def _():
+    from aeos.usdc_settlement import ChainClient
+    try:
+        client = ChainClient(Chain.BASE_SEPOLIA)
+        # If web3 is installed, this works — that's fine
+    except ImportError as e:
+        assert 'web3' in str(e).lower()
 
 # =============================================================================
 # Ed25519 SIGNATURE CROSS-MODULE (1 test)

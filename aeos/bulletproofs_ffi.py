@@ -164,18 +164,27 @@ class BulletproofsEngine:
 
     def _fallback_prove(self, value: int, range_bits: int,
                         domain: str) -> Dict[str, Any]:
-        """Fallback to Python simplified range proof."""
+        """Fallback to Python range proof (Fiat-Shamir challenge-response).
+        
+        NOTE: This provides binding and soundness but NOT zero-knowledge.
+        The Rust Bulletproofs module provides true ZK. This fallback is
+        suitable for testing and for cases where the verifier is trusted.
+        """
         from .crypto_primitives import RangeProof
         try:
             proof, blinding = RangeProof.create(value=value, range_bits=range_bits)
             return {
                 "success": True,
                 "proof": {
-                    "proof_bytes": list(proof.total_commitment),
-                    "commitment": list(proof.total_commitment),
+                    "bit_commitments": [c.hex() for c in proof.bit_commitments],
+                    "bit_proofs": [p.hex() for p in proof.bit_proofs],
+                    "responses": [r.hex() for r in proof.responses],
+                    "challenge": proof.challenge.hex(),
+                    "total_commitment": proof.total_commitment.hex(),
                     "range_bits": range_bits,
                     "domain": domain,
                     "_fallback": True,
+                    "_proof_object": proof,  # Keep for verification
                 },
                 "blinding": list(blinding),
                 "error": None,
@@ -183,16 +192,50 @@ class BulletproofsEngine:
         except ValueError as e:
             return {
                 "success": False,
-                "proof": {"proof_bytes": [], "commitment": [], "range_bits": range_bits, "domain": domain},
+                "proof": {"bit_commitments": [], "range_bits": range_bits,
+                          "domain": domain, "_fallback": True},
                 "blinding": [],
                 "error": str(e),
             }
 
     def _fallback_verify(self, proof: Dict[str, Any]) -> Dict[str, Any]:
-        """Fallback verification — checks structure only."""
-        if proof.get("_fallback"):
-            return {"valid": len(proof.get("proof_bytes", [])) > 0, "error": "fallback_mode"}
-        return {"valid": False, "error": "Cannot verify Rust proof without binary"}
+        """Verify a Python fallback range proof cryptographically.
+        
+        Reconstructs the RangeProof object and runs the full
+        Fiat-Shamir verification (challenge derivation + bit proof checks).
+        """
+        if not proof.get("_fallback"):
+            return {"valid": False, "error": "Cannot verify Rust proof without binary"}
+
+        # If we have the proof object directly, use it
+        proof_obj = proof.get("_proof_object")
+        if proof_obj is not None:
+            return {"valid": proof_obj.verify(), "error": None}
+
+        # Otherwise reconstruct from serialized form
+        try:
+            from .crypto_primitives import RangeProof
+            bit_commitments = [bytes.fromhex(c) for c in proof.get("bit_commitments", [])]
+            bit_proofs = [bytes.fromhex(p) for p in proof.get("bit_proofs", [])]
+            responses = [bytes.fromhex(r) for r in proof.get("responses", [])]
+            challenge = bytes.fromhex(proof.get("challenge", ""))
+            total_commitment = bytes.fromhex(proof.get("total_commitment", ""))
+            range_bits = proof.get("range_bits", 0)
+
+            if not bit_commitments or not bit_proofs or not responses:
+                return {"valid": False, "error": "Incomplete proof data"}
+
+            rp = RangeProof(
+                bit_commitments=bit_commitments,
+                bit_proofs=bit_proofs,
+                responses=responses,
+                challenge=challenge,
+                total_commitment=total_commitment,
+                range_bits=range_bits,
+            )
+            return {"valid": rp.verify(), "error": None}
+        except Exception as e:
+            return {"valid": False, "error": str(e)}
 
     def status(self) -> Dict[str, Any]:
         """Return engine status."""

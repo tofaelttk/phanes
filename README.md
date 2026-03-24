@@ -4,7 +4,7 @@
 
 Identity. Contracts. Disputes. Risk. Settlement. Consensus. — Everything an AI agent needs to exist as an economic entity.
 
-[![Tests](https://img.shields.io/badge/tests-77%2F77-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-84%2F84-brightgreen)]()
 [![PyPI](https://img.shields.io/pypi/v/phanes)](https://pypi.org/project/phanes/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![TypeScript](https://img.shields.io/badge/typescript-SDK-blue)]()
@@ -176,10 +176,10 @@ python tests/test_all.py
 ```
 
 ```
-═══ CRYPTO PRIMITIVES ═══       (9 tests)
+═══ CRYPTO PRIMITIVES ═══       (11 tests — incl. Fiat-Shamir tamper detection)
 ═══ IDENTITY ═══                (5 tests)
 ═══ CONTRACTS ═══               (3 tests)
-═══ THRESHOLD CRYPTO ═══        (6 tests)
+═══ THRESHOLD CRYPTO ═══        (8 tests — incl. VSS tamper detection)
 ═══ TOKENIZATION ═══            (6 tests)
 ═══ STATE CHANNELS ═══          (5 tests)
 ═══ ML ENGINE ═══               (2 tests)
@@ -190,14 +190,14 @@ python tests/test_all.py
 ═══ BFT DISTRIBUTED LEDGER ═══  (8 tests)
 ═══ MCP SERVER ═══              (4 tests)
 ═══ SETTLEMENT ENGINE ═══       (3 tests)
-═══ BULLETPROOFS FFI ═══        (2 tests)
+═══ BULLETPROOFS FFI ═══        (3 tests — incl. tamper rejection)
 ═══ REST API SERVER ═══         (4 tests)
 ═══ PERSISTENCE ENGINE ═══      (5 tests)
-═══ USDC ON-CHAIN SETTLEMENT ══ (5 tests)
+═══ USDC ON-CHAIN SETTLEMENT ══ (6 tests — incl. ChainClient)
 ═══ CROSS-MODULE ═══            (1 test)
 
 ══════════════════════════════════════
-  RESULTS: 77 passed, 0 failed
+  RESULTS: 84 passed, 0 failed
 ══════════════════════════════════════
 ```
 
@@ -302,7 +302,7 @@ phanes/
 - [x] Core protocol (19 modules, 9,000+ lines Python)
 - [x] REST API server (17 endpoints)
 - [x] Technical whitepaper
-- [x] 77-test suite (all modules covered)
+- [x] 84-test suite (all modules + tamper detection)
 - [x] TypeScript/Node SDK (22 tests)
 - [x] MCP server for Claude/GPT (11 tools)
 - [x] Stripe settlement hooks (authorize-capture escrow)
