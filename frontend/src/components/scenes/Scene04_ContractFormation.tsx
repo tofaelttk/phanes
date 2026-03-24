@@ -605,11 +605,11 @@ function ContractTemplate() {
           />
 
           {/* Header */}
-          <ForeignIcon x={cardX + 24} y={cardY + 30} size={20}>
+          <ForeignIcon x={cardX + 28} y={cardY + 30} size={20}>
             <FileText size={12} color={C.bronze} strokeWidth={1.5} />
           </ForeignIcon>
           <text
-            x={cardX + 42}
+            x={cardX + 48}
             y={cardY + 34}
             fill={C.ink}
             fontSize={13}
@@ -621,9 +621,9 @@ function ContractTemplate() {
 
           {/* Divider */}
           <line
-            x1={cardX + 16}
+            x1={cardX + 24}
             y1={cardY + 50}
-            x2={cardX + cardW - 16}
+            x2={cardX + cardW - 24}
             y2={cardY + 50}
             stroke={C.borderLight}
             strokeWidth={1}
@@ -644,7 +644,7 @@ function ContractTemplate() {
                 transition={{ duration: 0.3 }}
               >
                 {/* Field icon */}
-                <ForeignIcon x={cardX + 28} y={fy + 2} size={18}>
+                <ForeignIcon x={cardX + 32} y={fy + 2} size={18}>
                   <field.Icon
                     size={11}
                     color={C.inkFaint}
@@ -653,7 +653,7 @@ function ContractTemplate() {
                 </ForeignIcon>
                 {/* Label */}
                 <text
-                  x={cardX + 44}
+                  x={cardX + 52}
                   y={fy}
                   fill={C.inkFaint}
                   fontSize={9}
@@ -665,7 +665,7 @@ function ContractTemplate() {
                 </text>
                 {/* Value */}
                 <text
-                  x={cardX + 44}
+                  x={cardX + 52}
                   y={fy + 16}
                   fill={C.ink}
                   fontSize={12}
@@ -677,9 +677,9 @@ function ContractTemplate() {
                 {/* Divider */}
                 {i < fields.length - 1 && (
                   <line
-                    x1={cardX + 16}
+                    x1={cardX + 24}
                     y1={fy + 28}
-                    x2={cardX + cardW - 16}
+                    x2={cardX + cardW - 24}
                     y2={fy + 28}
                     stroke={C.borderLight}
                     strokeWidth={0.5}
@@ -794,11 +794,11 @@ function Obligations() {
             rx={1.5}
             fill={C.bronze}
           />
-          <ForeignIcon x={leftOblX + 24} y={oblY + 26} size={22}>
+          <ForeignIcon x={leftOblX + 28} y={oblY + 26} size={22}>
             <DollarSign size={13} color={C.bronze} strokeWidth={1.5} />
           </ForeignIcon>
           <text
-            x={leftOblX + 42}
+            x={leftOblX + 50}
             y={oblY + 24}
             fill={C.inkFaint}
             fontSize={8}
@@ -809,7 +809,7 @@ function Obligations() {
             OBLIGATION
           </text>
           <text
-            x={leftOblX + 42}
+            x={leftOblX + 50}
             y={oblY + 40}
             fill={C.ink}
             fontSize={14}
@@ -819,15 +819,15 @@ function Obligations() {
             Payment
           </text>
           <line
-            x1={leftOblX + 12}
+            x1={leftOblX + 20}
             y1={oblY + 52}
-            x2={leftOblX + oblCardW - 12}
+            x2={leftOblX + oblCardW - 20}
             y2={oblY + 52}
             stroke={C.borderLight}
             strokeWidth={0.5}
           />
           <text
-            x={leftOblX + 16}
+            x={leftOblX + 24}
             y={oblY + 70}
             fill={C.inkFaint}
             fontSize={10}
@@ -836,7 +836,7 @@ function Obligations() {
             Alice → Bob
           </text>
           <text
-            x={leftOblX + 16}
+            x={leftOblX + 24}
             y={oblY + 88}
             fill={C.bronze}
             fontSize={16}
@@ -846,12 +846,12 @@ function Obligations() {
             $25,000
           </text>
           {/* Lock icon */}
-          <ForeignIcon x={leftOblX + oblCardW - 24} y={oblY + 80} size={20}>
+          <ForeignIcon x={leftOblX + oblCardW - 28} y={oblY + 80} size={20}>
             <Lock size={12} color={C.inkGhost} strokeWidth={1.5} />
           </ForeignIcon>
           {/* Status circle */}
           <circle
-            cx={leftOblX + 16}
+            cx={leftOblX + 24}
             cy={oblY + 112}
             r={5}
             fill="none"
@@ -859,7 +859,7 @@ function Obligations() {
             strokeWidth={1.5}
           />
           <text
-            x={leftOblX + 28}
+            x={leftOblX + 36}
             y={oblY + 116}
             fill={C.inkFaint}
             fontSize={9}
@@ -901,11 +901,11 @@ function Obligations() {
             rx={1.5}
             fill={C.terra}
           />
-          <ForeignIcon x={rightOblX + 24} y={oblY + 26} size={22}>
+          <ForeignIcon x={rightOblX + 28} y={oblY + 26} size={22}>
             <Cpu size={13} color={C.terra} strokeWidth={1.5} />
           </ForeignIcon>
           <text
-            x={rightOblX + 42}
+            x={rightOblX + 50}
             y={oblY + 24}
             fill={C.inkFaint}
             fontSize={8}
@@ -916,7 +916,7 @@ function Obligations() {
             OBLIGATION
           </text>
           <text
-            x={rightOblX + 42}
+            x={rightOblX + 50}
             y={oblY + 40}
             fill={C.ink}
             fontSize={14}
@@ -926,15 +926,15 @@ function Obligations() {
             Delivery
           </text>
           <line
-            x1={rightOblX + 12}
+            x1={rightOblX + 20}
             y1={oblY + 52}
-            x2={rightOblX + oblCardW - 12}
+            x2={rightOblX + oblCardW - 20}
             y2={oblY + 52}
             stroke={C.borderLight}
             strokeWidth={0.5}
           />
           <text
-            x={rightOblX + 16}
+            x={rightOblX + 24}
             y={oblY + 70}
             fill={C.inkFaint}
             fontSize={10}
@@ -943,7 +943,7 @@ function Obligations() {
             Bob → Alice
           </text>
           <text
-            x={rightOblX + 16}
+            x={rightOblX + 24}
             y={oblY + 88}
             fill={C.terra}
             fontSize={13}
@@ -952,11 +952,11 @@ function Obligations() {
           >
             ML Inference
           </text>
-          <ForeignIcon x={rightOblX + oblCardW - 24} y={oblY + 80} size={20}>
+          <ForeignIcon x={rightOblX + oblCardW - 28} y={oblY + 80} size={20}>
             <Cpu size={12} color={C.inkGhost} strokeWidth={1.5} />
           </ForeignIcon>
           <circle
-            cx={rightOblX + 16}
+            cx={rightOblX + 24}
             cy={oblY + 112}
             r={5}
             fill="none"
@@ -964,7 +964,7 @@ function Obligations() {
             strokeWidth={1.5}
           />
           <text
-            x={rightOblX + 28}
+            x={rightOblX + 36}
             y={oblY + 116}
             fill={C.inkFaint}
             fontSize={9}
@@ -1389,11 +1389,9 @@ export default function Scene04_ContractFormation({
   ];
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ backgroundColor: C.cream }}
-    >
-      <div className="pt-14 pb-4 px-12 max-w-5xl mx-auto w-full">
+    <div className="scene-bg min-h-screen flex flex-col px-6 py-10 md:px-12 md:py-14">
+      <div className="max-w-5xl mx-auto w-full flex flex-col flex-1 min-h-0">
+      <div className="pt-2 pb-4 w-full">
         <motion.span
           style={{
             fontFamily: SANS,
@@ -1486,7 +1484,8 @@ export default function Scene04_ContractFormation({
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-6 pb-10">
+      <div className="flex-1 flex items-center justify-center px-2 pb-6 md:px-4 min-h-0">
+        <div className="w-full max-w-5xl py-4 px-2 md:px-4">
         <AnimatePresence mode="wait">
           {step === 0 && <TwoAgents key="s0" />}
           {step === 1 && <Discovery key="s1" />}
@@ -1494,6 +1493,8 @@ export default function Scene04_ContractFormation({
           {step === 3 && <Obligations key="s3" />}
           {step === 4 && <EscrowVault key="s4" />}
         </AnimatePresence>
+        </div>
+      </div>
       </div>
     </div>
   );

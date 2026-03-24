@@ -133,7 +133,7 @@ function ArchitectureDiagram({ visible }: { visible: boolean }) {
   const totalH = totalLayers * (barH + gap) - gap + 40;
 
   return (
-    <div className="mt-8 w-full">
+    <div className="mt-8 w-full px-2 py-2 md:px-4 md:py-3">
       <svg
         viewBox={`0 0 660 ${totalH}`}
         className="w-full"
@@ -864,8 +864,8 @@ export default function Scene01_TheSolution({
   }, [step, onStepComplete]);
 
   return (
-    <div className="scene-bg min-h-screen overflow-y-auto relative">
-      <div className="max-w-5xl mx-auto py-16 px-8 relative">
+    <div className="scene-bg min-h-screen overflow-y-auto relative px-8 py-12 md:px-16 md:py-16">
+      <div className="max-w-5xl mx-auto relative">
         <AnimatePresence mode="wait">
           {step === 0 && <ArchitectureSlide key="arch" />}
           {step === 1 && <FlowSlide key="flow" />}

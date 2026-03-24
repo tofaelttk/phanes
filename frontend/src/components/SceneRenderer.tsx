@@ -1,8 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { COLORS } from '../utils/constants';
 
-interface SceneRendererProps {
+interface Props {
   currentScene: number;
   currentStep: number;
   onStepComplete: () => void;
@@ -29,47 +28,34 @@ const scenes = [
   lazy(() => import('./scenes/Scene17_TheFuture')),
 ];
 
-function LoadingSpinner() {
+function Spinner() {
   return (
-    <div className="w-full h-full flex items-center justify-center">
-      <motion.div
-        className="w-6 h-6 rounded-full"
-        style={{
-          border: `2px solid ${COLORS.creamDark}`,
-          borderTopColor: COLORS.accent,
-        }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+    <div className="w-full h-full flex items-center justify-center min-h-screen">
+      <div
+        className="w-5 h-5 rounded-full animate-spin-slow"
+        style={{ border: '2px solid #EDE7DD', borderTopColor: '#B8956A' }}
       />
     </div>
   );
 }
 
-export default function SceneRenderer({
-  currentScene,
-  currentStep,
-  onStepComplete,
-}: SceneRendererProps) {
+export default function SceneRenderer({ currentScene, currentStep, onStepComplete }: Props) {
   if (currentScene < 0 || currentScene >= scenes.length) return null;
-  const SceneComponent = scenes[currentScene];
+  const Scene = scenes[currentScene];
 
   return (
-    <div className="w-full h-screen overflow-hidden relative">
+    <div className="w-full min-h-screen overflow-y-auto overflow-x-hidden relative">
       <AnimatePresence mode="wait">
         <motion.div
           key={currentScene}
-          className="w-full h-full"
-          initial={{ opacity: 0, y: 16 }}
+          className="w-full min-h-screen"
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
         >
-          <Suspense fallback={<LoadingSpinner />}>
-            <SceneComponent
-              step={currentStep}
-              currentStep={currentStep}
-              onStepComplete={onStepComplete}
-            />
+          <Suspense fallback={<Spinner />}>
+            <Scene step={currentStep} currentStep={currentStep} onStepComplete={onStepComplete} />
           </Suspense>
         </motion.div>
       </AnimatePresence>

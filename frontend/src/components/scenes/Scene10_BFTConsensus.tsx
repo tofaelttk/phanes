@@ -790,14 +790,8 @@ export default function Scene10_BFTConsensus({ step: _step, currentStep, onStepC
   const hashes = ['0xa7f3…b2c1', '0xa7f3…b2c1', '0xdead…beef', '0xa7f3…b2c1'];
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: C.cream,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '36px 24px 28px',
-    }}>
+    <div className="scene-bg min-h-screen flex flex-col items-center px-6 py-10 md:px-12 md:py-14">
+      <div className="max-w-5xl mx-auto w-full flex flex-col items-center">
       {/* Header */}
       <motion.span
         initial={{ opacity: 0, y: 8 }}
@@ -846,6 +840,7 @@ export default function Scene10_BFTConsensus({ step: _step, currentStep, onStepC
 
       {/* Main SVG */}
       <motion.div
+        className="p-4 md:p-5"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25, duration: 0.6 }}
@@ -854,7 +849,6 @@ export default function Scene10_BFTConsensus({ step: _step, currentStep, onStepC
           background: C.card,
           border: `1.5px solid ${C.rule}`,
           borderRadius: 18,
-          padding: '10px 12px',
           boxShadow: '0 2px 12px rgba(26,23,20,0.04)',
         }}
       >
@@ -938,6 +932,7 @@ export default function Scene10_BFTConsensus({ step: _step, currentStep, onStepC
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }

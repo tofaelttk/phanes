@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Play, Pause, Check,
-  PanelLeftClose, PanelLeft,
+  Play,
+  Pause,
+  PanelLeftClose,
+  PanelLeft,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { SCENE_TITLES, COLORS } from '../utils/constants';
 
@@ -20,6 +24,149 @@ interface NavigationProps {
   onToggleCollapse: () => void;
 }
 
+const SIDEBAR_EXPANDED = 280;
+const SIDEBAR_COLLAPSED = 56;
+const EASE: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
+
+function StepDot({ state }: { state: 'done' | 'active' | 'pending' }) {
+  if (state === 'active') {
+    return (
+      <motion.div
+        className="rounded-full shrink-0"
+        style={{
+          width: 20,
+          height: 6,
+          backgroundColor: COLORS.accent,
+        }}
+        layoutId="scene-dot-active"
+        transition={{ duration: 0.3 }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="rounded-full shrink-0"
+      style={{
+        width: 6,
+        height: 6,
+        backgroundColor: state === 'done' ? COLORS.sage : COLORS.rule,
+      }}
+    />
+  );
+}
+
+function SceneItem({
+  scene,
+  index,
+  currentScene,
+  sceneProgress,
+  collapsed,
+  onGoToScene,
+}: {
+  scene: (typeof SCENE_TITLES)[number];
+  index: number;
+  currentScene: number;
+  sceneProgress: number;
+  collapsed: boolean;
+  onGoToScene: (i: number) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const isPast = index < currentScene;
+  const isCurrent = index === currentScene;
+  const isFuture = index > currentScene;
+
+  return (
+    <button
+      onClick={() => onGoToScene(index)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left cursor-pointer relative"
+      style={{
+        backgroundColor: isCurrent
+          ? COLORS.creamDark
+          : hovered
+            ? `${COLORS.cream}99`
+            : 'transparent',
+      }}
+    >
+      {/* Active indicator bar */}
+      {isCurrent && (
+        <motion.div
+          className="absolute left-0 top-1/2 rounded-full"
+          style={{
+            width: 2,
+            height: 20,
+            backgroundColor: COLORS.accent,
+            translateY: '-50%',
+          }}
+          layoutId="nav-active-bar"
+          transition={{ duration: 0.3, ease: EASE }}
+        />
+      )}
+
+      {/* Step dot */}
+      <div className="shrink-0 flex items-center justify-center" style={{ width: 20 }}>
+        <StepDot state={isPast ? 'done' : isCurrent ? 'active' : 'pending'} />
+      </div>
+
+      {/* Title + subtitle */}
+      <AnimatePresence mode="wait">
+        {!collapsed && (
+          <motion.div
+            className="flex-1 min-w-0"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <p
+              className="text-sm truncate leading-tight"
+              style={{
+                fontSize: 14,
+                color: isCurrent
+                  ? COLORS.ink
+                  : isFuture
+                    ? COLORS.inkFaint
+                    : COLORS.inkMuted,
+                fontWeight: isCurrent ? 500 : 400,
+              }}
+            >
+              {scene.title}
+            </p>
+            {isCurrent && (
+              <motion.p
+                className="truncate mt-0.5"
+                style={{ fontSize: 12, color: COLORS.inkFaint, lineHeight: 1.3 }}
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.25 }}
+              >
+                {scene.subtitle}
+              </motion.p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Progress bar under current */}
+      {isCurrent && !collapsed && (
+        <motion.div
+          className="absolute bottom-0 left-3 right-3 rounded-full"
+          style={{
+            height: 2,
+            backgroundColor: COLORS.accent,
+            transformOrigin: 'left',
+          }}
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: sceneProgress / 100 }}
+          transition={{ duration: 0.3, ease: 'linear' }}
+        />
+      )}
+    </button>
+  );
+}
+
 export default function Navigation({
   currentScene,
   totalScenes,
@@ -33,7 +180,7 @@ export default function Navigation({
   collapsed,
   onToggleCollapse,
 }: NavigationProps) {
-  const [hovered, setHovered] = useState<number | null>(null);
+  const width = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
 
   return (
     <motion.nav
@@ -42,10 +189,11 @@ export default function Navigation({
         backgroundColor: COLORS.warmWhite,
         borderRight: `1px solid ${COLORS.rule}`,
       }}
-      animate={{ width: collapsed ? 60 : 300 }}
-      transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+      animate={{ width }}
+      transition={{ duration: 0.3, ease: EASE }}
     >
-      <div className="px-5 pt-6 pb-4 flex items-center justify-between shrink-0">
+      {/* Header */}
+      <div className="px-4 pt-5 pb-3 flex items-center justify-between shrink-0">
         <AnimatePresence mode="wait">
           {!collapsed && (
             <motion.div
@@ -55,126 +203,53 @@ export default function Navigation({
               transition={{ duration: 0.15 }}
             >
               <p
-                className="font-semibold"
                 style={{
-                  fontSize: '17px',
+                  fontSize: 16,
+                  fontWeight: 600,
                   letterSpacing: '-0.01em',
                   color: COLORS.ink,
                 }}
               >
                 Phanes
               </p>
-              <span className="section-label">Simulation</span>
+              <span className="section-label">Protocol Simulation</span>
             </motion.div>
           )}
         </AnimatePresence>
 
         <button
           onClick={onToggleCollapse}
-          className="p-1.5 rounded-md hover:bg-cream-dark/40 transition-colors cursor-pointer shrink-0"
+          className="p-1.5 rounded-md transition-colors cursor-pointer shrink-0"
           style={{ color: COLORS.inkFaint }}
         >
           {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-2 pb-4">
-        {SCENE_TITLES.slice(0, totalScenes).map((scene, i) => {
-          const isPast = i < currentScene;
-          const isCurrent = i === currentScene;
-          const isFuture = i > currentScene;
-
-          return (
-            <button
-              key={scene.id}
-              onClick={() => onGoToScene(i)}
-              onMouseEnter={() => setHovered(i)}
-              onMouseLeave={() => setHovered(null)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors text-left cursor-pointer relative"
-              style={{
-                backgroundColor:
-                  isCurrent
-                    ? `${COLORS.accent}0A`
-                    : hovered === i
-                      ? `${COLORS.cream}`
-                      : 'transparent',
-              }}
-            >
-              {isCurrent && (
-                <motion.div
-                  className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] rounded-full"
-                  style={{
-                    backgroundColor: COLORS.accent,
-                    height: 24,
-                  }}
-                  layoutId="nav-indicator"
-                  transition={{ duration: 0.3 }}
-                />
-              )}
-
-              <div className="shrink-0 flex items-center justify-center" style={{ width: 20 }}>
-                {isPast ? (
-                  <Check size={14} style={{ color: COLORS.sage }} strokeWidth={2.5} />
-                ) : isCurrent ? (
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: COLORS.accent }}
-                  />
-                ) : (
-                  <div
-                    className="w-2 h-2 rounded-full border"
-                    style={{ borderColor: COLORS.rule }}
-                  />
-                )}
-              </div>
-
-              <AnimatePresence mode="wait">
-                {!collapsed && (
-                  <motion.div
-                    className="flex-1 min-w-0"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <p
-                      className="text-sm truncate leading-tight"
-                      style={{
-                        color: isCurrent
-                          ? COLORS.ink
-                          : isFuture
-                            ? COLORS.inkFaint
-                            : COLORS.inkMuted,
-                        fontWeight: isCurrent ? 600 : 400,
-                      }}
-                    >
-                      {scene.title}
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {isCurrent && !collapsed && (
-                <motion.div
-                  className="h-[2px] absolute bottom-0 left-3 right-3 rounded-full"
-                  style={{ backgroundColor: COLORS.accent }}
-                  initial={{ scaleX: 0, originX: 0 }}
-                  animate={{ scaleX: sceneProgress / 100 }}
-                  transition={{ duration: 0.3 }}
-                />
-              )}
-            </button>
-          );
-        })}
+      {/* Scene list */}
+      <div className="flex-1 overflow-y-auto px-2 pb-2">
+        {SCENE_TITLES.slice(0, totalScenes).map((scene, i) => (
+          <SceneItem
+            key={scene.id}
+            scene={scene}
+            index={i}
+            currentScene={currentScene}
+            sceneProgress={sceneProgress}
+            collapsed={collapsed}
+            onGoToScene={onGoToScene}
+          />
+        ))}
       </div>
 
+      {/* Bottom controls */}
       <div
         className="shrink-0 px-4 py-4 flex flex-col gap-3"
         style={{ borderTop: `1px solid ${COLORS.rule}` }}
       >
         <AnimatePresence mode="wait">
-          {!collapsed && (
+          {!collapsed ? (
             <motion.div
+              key="controls-expanded"
               className="flex items-center justify-between"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -184,16 +259,19 @@ export default function Navigation({
               <button
                 onClick={onPrev}
                 disabled={currentScene <= 0}
-                className="text-xs font-medium disabled:opacity-30 cursor-pointer transition-colors hover:underline underline-offset-2"
+                className="flex items-center gap-0.5 text-xs font-medium disabled:opacity-30 cursor-pointer transition-opacity"
                 style={{ color: COLORS.inkMuted }}
               >
+                <ChevronLeft size={14} />
                 Prev
               </button>
 
               <button
                 onClick={isPlaying ? onPause : onPlay}
-                className="p-2 rounded-full cursor-pointer transition-colors"
+                className="flex items-center justify-center rounded-full cursor-pointer transition-colors"
                 style={{
+                  width: 36,
+                  height: 36,
                   backgroundColor: `${COLORS.accent}14`,
                   color: COLORS.accent,
                 }}
@@ -204,28 +282,39 @@ export default function Navigation({
               <button
                 onClick={onNext}
                 disabled={currentScene >= totalScenes - 1}
-                className="text-xs font-medium disabled:opacity-30 cursor-pointer transition-colors hover:underline underline-offset-2"
+                className="flex items-center gap-0.5 text-xs font-medium disabled:opacity-30 cursor-pointer transition-opacity"
                 style={{ color: COLORS.inkMuted }}
               >
                 Next
+                <ChevronRight size={14} />
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="controls-collapsed"
+              className="flex justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <button
+                onClick={isPlaying ? onPause : onPlay}
+                className="flex items-center justify-center rounded-full cursor-pointer transition-colors"
+                style={{
+                  width: 36,
+                  height: 36,
+                  backgroundColor: `${COLORS.accent}14`,
+                  color: COLORS.accent,
+                }}
+              >
+                {isPlaying ? <Pause size={14} /> : <Play size={14} />}
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {collapsed && (
-          <button
-            onClick={isPlaying ? onPause : onPlay}
-            className="p-2 rounded-full cursor-pointer transition-colors mx-auto"
-            style={{
-              backgroundColor: `${COLORS.accent}14`,
-              color: COLORS.accent,
-            }}
-          >
-            {isPlaying ? <Pause size={14} /> : <Play size={14} />}
-          </button>
-        )}
-
+        {/* Scene counter */}
         <AnimatePresence mode="wait">
           {!collapsed && (
             <motion.p
@@ -235,8 +324,43 @@ export default function Navigation({
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              {currentScene + 1} of {totalScenes}
+              Scene {currentScene + 1} of {totalScenes}
             </motion.p>
+          )}
+        </AnimatePresence>
+
+        {/* Step progress dots */}
+        <AnimatePresence mode="wait">
+          {!collapsed && (
+            <motion.div
+              className="flex items-center justify-center gap-1.5"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              {Array.from({ length: 5 }).map((_, i) => {
+                const filled = sceneProgress >= (i + 1) * 20;
+                const active = sceneProgress >= i * 20 && sceneProgress < (i + 1) * 20;
+                return (
+                  <div
+                    key={i}
+                    className="rounded-full transition-colors"
+                    style={{
+                      width: active ? 10 : 5,
+                      height: 5,
+                      backgroundColor: filled
+                        ? COLORS.sage
+                        : active
+                          ? COLORS.accent
+                          : COLORS.rule,
+                      borderRadius: 999,
+                      transition: 'all 0.3s ease',
+                    }}
+                  />
+                );
+              })}
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

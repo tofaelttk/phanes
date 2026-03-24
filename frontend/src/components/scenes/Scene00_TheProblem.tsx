@@ -432,7 +432,7 @@ function HumanCard({
 }) {
   return (
     <motion.div
-      className="flex items-center gap-3 px-4 py-3 rounded-xl"
+      className="flex items-center gap-3 p-4 rounded-xl"
       style={{
         backgroundColor: COLORS.card,
         border: `1px solid ${COLORS.rule}`,
@@ -466,7 +466,7 @@ function HumanCard({
 function AIEmptyCard({ delay }: { delay: number }) {
   return (
     <motion.div
-      className="flex items-center gap-3 px-4 py-3 rounded-xl"
+      className="flex items-center gap-3 p-4 rounded-xl"
       style={{
         backgroundColor: 'transparent',
         border: `1.5px dashed ${COLORS.ruleDark}`,
@@ -501,7 +501,7 @@ function AEOSSolutionCard({
 }) {
   return (
     <motion.div
-      className="flex items-center gap-3 px-4 py-3 rounded-xl"
+      className="flex items-center gap-3 p-4 rounded-xl"
       style={{
         backgroundColor: COLORS.card,
         border: `1.5px solid ${accentColor}`,
@@ -846,8 +846,8 @@ export default function Scene00_TheProblem({
   }, [step, onStepComplete]);
 
   return (
-    <div className="scene-bg min-h-screen overflow-y-auto relative">
-      <div className="max-w-5xl mx-auto py-16 px-8 relative">
+    <div className="scene-bg min-h-screen overflow-y-auto relative px-8 py-12 md:px-16 md:py-16">
+      <div className="max-w-5xl mx-auto relative">
         <AnimatePresence mode="wait">
           {step === 0 && <ProblemSlide key="problem" />}
 

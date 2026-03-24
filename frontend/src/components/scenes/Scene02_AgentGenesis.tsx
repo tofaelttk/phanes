@@ -1690,12 +1690,10 @@ export default function Scene02_AgentGenesis({
   ];
 
   return (
-    <div
-      className="min-h-screen flex flex-col"
-      style={{ backgroundColor: C.cream }}
-    >
+    <div className="scene-bg min-h-screen flex flex-col px-6 py-10 md:px-12 md:py-14">
+      <div className="max-w-5xl mx-auto w-full flex flex-col flex-1 min-h-0">
       {/* Header */}
-      <div className="pt-14 pb-4 px-12 max-w-5xl mx-auto w-full">
+      <div className="pt-2 pb-4 w-full">
         <motion.span
           style={{
             fontFamily: SANS,
@@ -1792,7 +1790,8 @@ export default function Scene02_AgentGenesis({
       </div>
 
       {/* Visualization */}
-      <div className="flex-1 flex items-center justify-center px-6 pb-10">
+      <div className="flex-1 flex items-center justify-center px-2 pb-6 md:px-4 min-h-0">
+        <div className="w-full max-w-5xl py-4 px-2 md:px-4">
         <AnimatePresence mode="wait">
           {step === 0 && <KeyGeneration key="s0" />}
           {step === 1 && <KeySplit key="s1" />}
@@ -1801,6 +1800,8 @@ export default function Scene02_AgentGenesis({
           {step === 4 && <AuthorityBounds key="s4" />}
           {step === 5 && <MerkleRegistration key="s5" />}
         </AnimatePresence>
+        </div>
+      </div>
       </div>
     </div>
   );

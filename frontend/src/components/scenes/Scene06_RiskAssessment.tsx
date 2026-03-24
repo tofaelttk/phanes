@@ -205,7 +205,7 @@ function RadarChart({
         background: C.card,
         borderRadius: 14,
         border: `1px solid ${C.rule}`,
-        padding: '20px 16px 16px',
+        padding: 20,
         maxWidth: 440,
         width: '100%',
         marginBottom: 16,
@@ -687,18 +687,8 @@ export default function Scene06_RiskAssessment({
   }, [step]);
 
   return (
-    <div
-      style={{
-        width: '100%',
-        minHeight: '100vh',
-        background: C.cream,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '48px 24px 32px',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="scene-bg min-h-screen flex flex-col items-center overflow-hidden px-8 py-12 md:px-16 md:py-16">
+      <div className="max-w-5xl mx-auto w-full flex flex-col items-center">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -12 }}
@@ -789,7 +779,7 @@ export default function Scene06_RiskAssessment({
               background: C.card,
               borderRadius: 14,
               border: `1px solid ${C.rule}`,
-              padding: '18px 22px',
+              padding: 20,
               maxWidth: 440,
               width: '100%',
               boxShadow: `0 2px 12px ${rgba(C.ink, 0.05)}`,
@@ -826,6 +816,7 @@ export default function Scene06_RiskAssessment({
           <ScoreDisplay visible={step >= 3} />
         </div>
       )}
+      </div>
     </div>
   );
 }

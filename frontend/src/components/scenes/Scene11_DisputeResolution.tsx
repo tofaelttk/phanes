@@ -209,7 +209,7 @@ function DisputeCard({ visible }: { visible: boolean }) {
         borderTop: `3px solid ${C.rose}`,
         border: `1.5px solid ${C.rule}`,
         borderRadius: 14,
-        padding: '18px 22px',
+        padding: 20,
         width: '100%',
         maxWidth: 480,
       }}
@@ -314,7 +314,7 @@ function EvidencePipeline({ visible }: { visible: boolean }) {
         background: C.card,
         border: `1.5px solid ${C.rule}`,
         borderRadius: 16,
-        padding: '16px 12px',
+        padding: 20,
       }}
     >
       <div style={{
@@ -475,7 +475,7 @@ function AutoResolutionChecklist({ visible }: { visible: boolean }) {
         background: C.card,
         border: `1.5px solid ${C.rule}`,
         borderRadius: 14,
-        padding: '18px 22px',
+        padding: 20,
         minWidth: 340,
         maxWidth: 440,
       }}
@@ -579,7 +579,7 @@ function ResolutionApplied({ visible }: { visible: boolean }) {
           background: C.card,
           border: `1.5px solid ${C.rule}`,
           borderRadius: 14,
-          padding: '16px 20px',
+          padding: 20,
           flex: '1 1 260px',
           maxWidth: 320,
         }}
@@ -653,7 +653,7 @@ function ResolutionApplied({ visible }: { visible: boolean }) {
           background: C.card,
           border: `1.5px solid ${C.rule}`,
           borderRadius: 14,
-          padding: '16px 20px',
+          padding: 20,
           flex: '1 1 260px',
           maxWidth: 340,
         }}
@@ -743,14 +743,8 @@ export default function Scene11_DisputeResolution({ step: _step, currentStep, on
   }, [currentStep, onStepComplete]);
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: C.cream,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      padding: '36px 24px 28px',
-    }}>
+    <div className="scene-bg min-h-screen flex flex-col items-center px-6 py-10 md:px-12 md:py-14">
+      <div className="max-w-5xl mx-auto w-full flex flex-col items-center">
       {/* Header */}
       <motion.span
         initial={{ opacity: 0, y: 8 }}
@@ -828,7 +822,7 @@ export default function Scene11_DisputeResolution({ step: _step, currentStep, on
             background: C.card,
             border: `1.5px solid ${C.rule}`,
             borderRadius: 18,
-            padding: '12px 16px',
+            padding: 20,
             boxShadow: '0 2px 12px rgba(26,23,20,0.04)',
           }}
         >
@@ -893,6 +887,7 @@ export default function Scene11_DisputeResolution({ step: _step, currentStep, on
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
