@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "aeos-bulletproofs"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "bulletproofs",
  "curve25519-dalek-ng",

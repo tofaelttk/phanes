@@ -554,39 +554,57 @@ def _():
         assert 'live key' in str(e).lower()
 
 # =============================================================================
-# 15. BULLETPROOFS FFI (2 tests)
+# 15. BULLETPROOFS FFI (4 tests — works with Rust binary OR Python fallback)
 # =============================================================================
 print("\n═══ BULLETPROOFS FFI ═══")
 
-@test("Bulletproofs fallback: real Fiat-Shamir verification")
+@test("Bulletproofs prove + verify")
 def _():
-    engine = BulletproofsEngine("/nonexistent/path")
-    assert not engine.available
+    engine = BulletproofsEngine()
     result = engine.prove(100_000, 64, "authority_bound")
     assert result['success']
     v = engine.verify(result['proof'])
     assert v['valid']
+    if engine.is_zk:
+        print("    (using Rust — true zero-knowledge)")
 
-@test("Bulletproofs fallback: tampered proof rejected")
+@test("Bulletproofs tampered proof rejected")
 def _():
-    engine = BulletproofsEngine("/nonexistent/path")
+    engine = BulletproofsEngine()
     result = engine.prove(50000, 32, "test")
-    # Tamper with the challenge
     bad_proof = dict(result['proof'])
-    bad_proof['challenge'] = '00' * 32
     bad_proof.pop('_proof_object', None)
+    if engine.is_zk:
+        # Rust path: tamper the proof bytes
+        bp = list(bad_proof.get('proof_bytes', []))
+        if bp:
+            bp[0] = (bp[0] + 1) % 256
+            bad_proof['proof_bytes'] = bp
+    else:
+        # Python fallback: tamper the challenge
+        bad_proof['challenge'] = '00' * 32
     v = engine.verify(bad_proof)
     assert not v['valid']
 
 @test("Bulletproofs batch verify")
 def _():
-    engine = BulletproofsEngine("/nonexistent/path")
+    engine = BulletproofsEngine()
     r1 = engine.prove(50000, 32, "d1")
     r2 = engine.prove(99999, 32, "d2")
     assert engine.verify(r1['proof'])['valid']
     assert engine.verify(r2['proof'])['valid']
     batch = engine.batch_verify([r1['proof'], r2['proof']])
     assert batch['all_valid']
+
+@test("Bulletproofs ZK status reporting")
+def _():
+    engine = BulletproofsEngine()
+    s = engine.status()
+    if engine.is_zk:
+        assert s.get('zk') == True or s.get('engine') == 'rust_bulletproofs'
+    else:
+        assert s.get('zk') == False
+        assert 'fallback' in s.get('engine', '')
 
 # =============================================================================
 # 16. REST API SERVER (4 tests — skipped if FastAPI not installed)

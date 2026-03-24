@@ -1,8 +1,8 @@
 [package]
 name = "aeos-bulletproofs"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "Production Bulletproofs range proofs for AEOS Protocol"
+description = "Production Bulletproofs for AEOS Protocol — true zero-knowledge range proofs, aggregated proofs, commitment arithmetic, equality proofs"
 
 [lib]
 name = "aeos_bulletproofs"

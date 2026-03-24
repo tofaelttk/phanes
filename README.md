@@ -4,7 +4,7 @@
 
 Identity. Contracts. Disputes. Risk. Settlement. Consensus. — Everything an AI agent needs to exist as an economic entity.
 
-[![Tests](https://img.shields.io/badge/tests-84%2F84-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-85%2F85-brightgreen)]()
 [![PyPI](https://img.shields.io/pypi/v/phanes)](https://pypi.org/project/phanes/)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)]()
 [![TypeScript](https://img.shields.io/badge/typescript-SDK-blue)]()
