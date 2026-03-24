@@ -202,7 +202,7 @@ export default function WelcomeScreen({ onStart }: WelcomeScreenProps) {
           style={{ fontSize: '12px', color: COLORS.inkFaint }}
           {...entry(4.4)}
         >
-          18 interactive scenes · approximately 5 minutes
+          17 interactive scenes · approximately 5 minutes
         </motion.p>
       </div>
     </div>

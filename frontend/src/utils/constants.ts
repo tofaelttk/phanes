@@ -144,13 +144,6 @@ export const SCENE_TITLES = [
     icon: 'Orbit',
     duration: 22000,
   },
-  {
-    id: 'the-future',
-    title: 'The Future',
-    subtitle: 'The agent economy is being built right now',
-    icon: 'Sparkles',
-    duration: 15000,
-  },
 ] as const;
 
 export const AGENT_TYPES = {

@@ -25,7 +25,6 @@ const scenes = [
   lazy(() => import('./scenes/Scene14_SettlementFlow')),
   lazy(() => import('./scenes/Scene15_ThresholdCrypto')),
   lazy(() => import('./scenes/Scene16_FullLifecycle')),
-  lazy(() => import('./scenes/Scene17_TheFuture')),
 ];
 
 function Spinner() {

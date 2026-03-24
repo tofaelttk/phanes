@@ -8,9 +8,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import Navigation from './components/Navigation';
 import SceneRenderer from './components/SceneRenderer';
 import { useSimulation } from './hooks/useSimulation';
-import { SCENE_TITLES, COLORS } from './utils/constants';
-
-const TOTAL_SCENES = 18;
+import { SCENE_TITLES, COLORS, TOTAL_SCENES } from './utils/constants';
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(true);
