@@ -30,7 +30,7 @@ const scenes = [
 
 function Spinner() {
   return (
-    <div className="w-full h-full flex items-center justify-center min-h-screen">
+    <div className="w-full min-h-screen flex items-center justify-center">
       <div
         className="w-5 h-5 rounded-full animate-spin-slow"
         style={{ border: '2px solid #EDE7DD', borderTopColor: '#B8956A' }}
@@ -44,21 +44,19 @@ export default function SceneRenderer({ currentScene, currentStep, onStepComplet
   const Scene = scenes[currentScene];
 
   return (
-    <div className="w-full min-h-screen overflow-y-auto overflow-x-hidden relative">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentScene}
-          className="w-full min-h-screen"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <Suspense fallback={<Spinner />}>
-            <Scene step={currentStep} currentStep={currentStep} onStepComplete={onStepComplete} />
-          </Suspense>
-        </motion.div>
-      </AnimatePresence>
-    </div>
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={currentScene}
+        className="w-full"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Suspense fallback={<Spinner />}>
+          <Scene step={currentStep} currentStep={currentStep} onStepComplete={onStepComplete} />
+        </Suspense>
+      </motion.div>
+    </AnimatePresence>
   );
 }
