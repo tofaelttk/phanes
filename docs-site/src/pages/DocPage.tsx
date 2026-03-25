@@ -1,5 +1,5 @@
-import { useLayoutEffect, useMemo } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { useMemo } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { FileQuestion } from 'lucide-react';
 import { MarkdownDoc } from '@/components/docs/MarkdownDoc';
 import { SectionPermalink } from '@/components/docs/SectionPermalink';
@@ -10,7 +10,6 @@ import { extractToc, slugify } from '@/lib/headings';
 import { useActiveHeading } from '@/hooks/useActiveHeading';
 
 export default function DocPage() {
-  const { key: locationKey } = useLocation();
   const { '*': splat } = useParams();
   const slug = splat && splat.length > 0 ? splat : 'overview';
   const raw = getDocContent(slug);
@@ -18,11 +17,6 @@ export default function DocPage() {
   const headings = useMemo(() => (raw ? extractToc(body) : []), [raw, body]);
   const mainScrollRef = useMainScrollRef();
   const activeId = useActiveHeading(headings, mainScrollRef);
-
-  useLayoutEffect(() => {
-    const el = mainScrollRef.current;
-    if (el) el.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-  }, [slug, locationKey, mainScrollRef]);
 
   if (!raw) {
     return (
@@ -49,9 +43,9 @@ export default function DocPage() {
           <header className="mb-10">
             <h1
               id={titleId}
-              className="group flex items-start justify-between gap-x-3 gap-y-1 text-3xl sm:text-[2rem] font-semibold tracking-tight text-[var(--color-text)] leading-tight scroll-mt-6"
+              className="group flex flex-wrap items-baseline gap-x-2 gap-y-1 text-3xl sm:text-[2rem] font-semibold tracking-tight text-[var(--color-text)] leading-tight scroll-mt-6"
             >
-              <span className="min-w-0 flex-1">{title}</span>
+              <span className="min-w-0">{title}</span>
               <SectionPermalink id={titleId} iconSize={18} />
             </h1>
           </header>

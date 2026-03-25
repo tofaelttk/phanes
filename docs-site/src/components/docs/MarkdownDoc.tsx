@@ -33,40 +33,40 @@ export function MarkdownDoc({ markdown }: Props) {
     },
     h2({ id, children }) {
       return (
-        <h2 id={id} className="group flex items-start justify-between gap-x-3 gap-y-1">
-          <span className="min-w-0 flex-1">{children}</span>
+        <h2 id={id} className="group flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="min-w-0">{children}</span>
           {id ? <SectionPermalink id={id} iconSize={15} /> : null}
         </h2>
       );
     },
     h3({ id, children }) {
       return (
-        <h3 id={id} className="group flex items-start justify-between gap-x-3 gap-y-1">
-          <span className="min-w-0 flex-1">{children}</span>
+        <h3 id={id} className="group flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="min-w-0">{children}</span>
           {id ? <SectionPermalink id={id} iconSize={14} /> : null}
         </h3>
       );
     },
     h4({ id, children }) {
       return (
-        <h4 id={id} className="group flex items-start justify-between gap-x-3 gap-y-1">
-          <span className="min-w-0 flex-1">{children}</span>
+        <h4 id={id} className="group flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="min-w-0">{children}</span>
           {id ? <SectionPermalink id={id} iconSize={13} /> : null}
         </h4>
       );
     },
     h5({ id, children }) {
       return (
-        <h5 id={id} className="group flex items-start justify-between gap-x-3 gap-y-1">
-          <span className="min-w-0 flex-1">{children}</span>
+        <h5 id={id} className="group flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="min-w-0">{children}</span>
           {id ? <SectionPermalink id={id} iconSize={12} /> : null}
         </h5>
       );
     },
     h6({ id, children }) {
       return (
-        <h6 id={id} className="group flex items-start justify-between gap-x-3 gap-y-1">
-          <span className="min-w-0 flex-1">{children}</span>
+        <h6 id={id} className="group flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="min-w-0">{children}</span>
           {id ? <SectionPermalink id={id} iconSize={12} /> : null}
         </h6>
       );

@@ -60,8 +60,12 @@ export function MobileDrawer({ open, onClose }: Props) {
                             to={`/docs/${item.slug}`}
                             onClick={() => {
                               onClose();
-                              const el = mainScrollRef.current;
-                              if (el) el.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                              const reset = () => {
+                                const el = mainScrollRef.current;
+                                if (el) el.scrollTop = 0;
+                              };
+                              reset();
+                              requestAnimationFrame(reset);
                             }}
                             className={`block rounded-md px-3 py-2 text-[14px] ${
                               active

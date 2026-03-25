@@ -62,8 +62,12 @@ export function Sidebar() {
                           <Link
                             to={`/docs/${item.slug}`}
                             onClick={() => {
-                              const el = mainScrollRef.current;
-                              if (el) el.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                              const reset = () => {
+                                const el = mainScrollRef.current;
+                                if (el) el.scrollTop = 0;
+                              };
+                              reset();
+                              requestAnimationFrame(reset);
                             }}
                             className={`block px-2.5 py-1.5 text-[14px] leading-snug transition-colors outline-none focus-visible:outline-none rounded-none border-0 shadow-none bg-transparent ${
                               active
