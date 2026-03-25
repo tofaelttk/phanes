@@ -1,41 +1,71 @@
-import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import type { TocHeading } from '@/lib/headings';
 
-/** Reading line from viewport top (sticky header height). */
-const READ_LINE_PX = 88;
+/** When within this distance of scroll bottom, pin the last TOC entry (short final sections). */
+const BOTTOM_PIN_SLACK_PX = 48;
 
-/** Y position of element top relative to scroll container content (for ordering). */
-function offsetTopInScroller(el: HTMLElement, scroller: HTMLElement | null): number {
-  if (!scroller) {
-    const r = el.getBoundingClientRect();
-    return r.top + window.scrollY;
-  }
-  const er = el.getBoundingClientRect();
-  const sr = scroller.getBoundingClientRect();
-  return er.top - sr.top + scroller.scrollTop;
+/** Fine-grained thresholds so IntersectionObserver fires while headings move through the scrollport. */
+function buildThresholds(steps = 32): number[] {
+  return Array.from({ length: steps + 1 }, (_, i) => i / steps);
 }
 
-function sortIdsByDomOrder(ids: string[], scroller: HTMLElement | null): string[] {
+function sortIdsByDomOrder(ids: string[], root: HTMLElement | null): string[] {
+  if (!root) return [...ids];
   const pairs: { id: string; y: number }[] = [];
   for (const id of ids) {
     const el = document.getElementById(id);
     if (!el) continue;
-    pairs.push({ id, y: offsetTopInScroller(el, scroller) });
+    const er = el.getBoundingClientRect();
+    const sr = root.getBoundingClientRect();
+    pairs.push({ id, y: er.top - sr.top + root.scrollTop });
   }
   pairs.sort((a, b) => a.y - b.y);
   return pairs.map((p) => p.id);
 }
 
-function activeByReadingLine(sortedIds: string[]): string | null {
+/**
+ * Modern scroll-spy logic (IntersectionObserver–friendly):
+ * - Among headings that intersect the scrollport, pick the one **closest to the top**
+ *   (smallest `relTop` = top edge nearest the top of the scroll container).
+ * - Bottom-of-page override when the user reaches the end (short last sections).
+ * - If nothing matches (edge case), keep previous active or fall back to first id.
+ */
+function computeActiveId(
+  sortedIds: string[],
+  root: HTMLElement | null,
+  previous: string | null
+): string | null {
   if (sortedIds.length === 0) return null;
-  let current = sortedIds[0];
+  if (!root) return sortedIds[0];
+
+  const st = root.scrollTop;
+  const vh = root.clientHeight;
+  const sh = root.scrollHeight;
+  const rootRect = root.getBoundingClientRect();
+  const hasScrollRoom = sh > vh + 2;
+
+  if (hasScrollRoom && st + vh >= sh - BOTTOM_PIN_SLACK_PX) {
+    return sortedIds[sortedIds.length - 1];
+  }
+
+  let bestId: string | null = null;
+  let bestTop = Infinity;
+
   for (const id of sortedIds) {
     const el = document.getElementById(id);
     if (!el) continue;
-    const { top } = el.getBoundingClientRect();
-    if (top <= READ_LINE_PX) current = id;
+    const r = el.getBoundingClientRect();
+    const relTop = r.top - rootRect.top;
+    const relBottom = r.bottom - rootRect.top;
+    if (relBottom <= 0 || relTop >= vh) continue;
+    if (relTop < bestTop) {
+      bestTop = relTop;
+      bestId = id;
+    }
   }
-  return current;
+
+  if (bestId !== null) return bestId;
+  return previous && sortedIds.includes(previous) ? previous : sortedIds[0];
 }
 
 export function useActiveHeading(
@@ -46,71 +76,103 @@ export function useActiveHeading(
   const idKey = useMemo(() => ids.join('\0'), [ids]);
 
   const [active, setActive] = useState<string | null>(() => ids[0] ?? null);
+  const previousRef = useRef<string | null>(ids[0] ?? null);
 
-  useEffect(() => {
-    setActive(ids[0] ?? null);
+  useLayoutEffect(() => {
+    const first = ids[0] ?? null;
+    previousRef.current = first;
+    setActive(first);
   }, [idKey, ids]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (ids.length === 0) {
       setActive(null);
+      previousRef.current = null;
       return;
     }
 
+    let raf = 0;
+    let rafRetry = 0;
+    let cancelled = false;
+    let dispose: (() => void) | undefined;
+
     const flush = () => {
       const root = scrollRootRef.current;
+      if (!root) return;
       const sorted = sortIdsByDomOrder(ids, root);
       if (sorted.length === 0) return;
-
-      const next = activeByReadingLine(sorted);
-      if (next) setActive((p) => (p === next ? p : next));
+      const next = computeActiveId(sorted, root, previousRef.current);
+      if (next) {
+        previousRef.current = next;
+        setActive((p) => (p === next ? p : next));
+      }
     };
 
-    let raf = 0;
-    let ticking = false;
     const schedule = () => {
-      if (ticking) return;
-      ticking = true;
+      cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        ticking = false;
         flush();
       });
     };
 
-    schedule();
+    const thresholds = buildThresholds(40);
 
-    const root = scrollRootRef.current;
-    const scrollTarget: HTMLElement | Window = root ?? window;
-    scrollTarget.addEventListener('scroll', schedule, { passive: true, capture: true });
-    window.addEventListener('resize', schedule);
+    const setup = () => {
+      const root = scrollRootRef.current;
+      if (!root) {
+        rafRetry = requestAnimationFrame(() => {
+          if (!cancelled) setup();
+        });
+        return;
+      }
 
-    const observers: IntersectionObserver[] = [];
-    const ioRoot = root ?? null;
-    for (const id of ids) {
-      const el = document.getElementById(id);
-      if (!el) continue;
-      const obs = new IntersectionObserver(schedule, {
-        root: ioRoot,
-        rootMargin: `-${READ_LINE_PX}px 0px -45% 0px`,
-        threshold: [0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1],
+      const io = new IntersectionObserver(() => schedule(), {
+        root,
+        rootMargin: '0px 0px 0px 0px',
+        threshold: thresholds,
       });
-      obs.observe(el);
-      observers.push(obs);
-    }
 
-    const ro = new ResizeObserver(schedule);
-    if (root) ro.observe(root);
-    ro.observe(document.documentElement);
-    const mo = new MutationObserver(schedule);
-    mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['id', 'class'] });
+      const observeHeadings = () => {
+        io.disconnect();
+        const sorted = sortIdsByDomOrder(ids, root);
+        for (const id of sorted) {
+          const el = document.getElementById(id);
+          if (el) io.observe(el);
+        }
+      };
+
+      observeHeadings();
+      flush();
+
+      const onScroll = () => schedule();
+      root.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', schedule);
+
+      const ro = new ResizeObserver(schedule);
+      ro.observe(root);
+
+      const mo = new MutationObserver(() => {
+        observeHeadings();
+        schedule();
+      });
+      mo.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['id'] });
+
+      dispose = () => {
+        io.disconnect();
+        root.removeEventListener('scroll', onScroll);
+        window.removeEventListener('resize', schedule);
+        ro.disconnect();
+        mo.disconnect();
+      };
+    };
+
+    setup();
 
     return () => {
+      cancelled = true;
       cancelAnimationFrame(raf);
-      scrollTarget.removeEventListener('scroll', schedule, { capture: true });
-      window.removeEventListener('resize', schedule);
-      observers.forEach((o) => o.disconnect());
-      ro.disconnect();
-      mo.disconnect();
+      cancelAnimationFrame(rafRetry);
+      dispose?.();
     };
   }, [idKey, ids, scrollRootRef]);
 

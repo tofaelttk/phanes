@@ -25,7 +25,7 @@ export function TableOfContents({ headings, activeId }: Props) {
     const a = Array.from(navRef.current.querySelectorAll<HTMLAnchorElement>('a')).find(
       (el) => el.getAttribute('href') === want
     );
-    a?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    a?.scrollIntoView({ block: 'nearest', behavior: 'auto' });
   }, [activeId]);
 
   if (headings.length === 0) {
