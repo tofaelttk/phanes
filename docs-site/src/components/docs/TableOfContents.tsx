@@ -59,7 +59,7 @@ export function TableOfContents({ headings, activeId }: Props) {
                   className={`block border-l-2 border-solid py-1.5 -ml-px leading-snug transition-[color,border-color] duration-150 ${depthTextClass(h.depth)} ${
                     active
                       ? 'font-semibold text-[var(--color-text)]'
-                      : 'text-[var(--color-text-tertiary)] hover:text-[var(--color-text-secondary)]'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)]'
                   }`}
                 >
                   {h.text}

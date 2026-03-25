@@ -3,8 +3,10 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { NAV_SECTIONS } from '@/config/navigation';
+import { useMainScrollRef } from '@/context/MainScrollContext';
 
 export function Sidebar() {
+  const mainScrollRef = useMainScrollRef();
   const loc = useLocation();
   const pathSlug = loc.pathname.replace(/^\/docs\/?/, '') || 'overview';
   const [open, setOpen] = useState<Record<string, boolean>>(() =>
@@ -24,8 +26,8 @@ export function Sidebar() {
   const toggle = (id: string) => setOpen((o) => ({ ...o, [id]: !o[id] }));
 
   return (
-    <aside className="hidden lg:flex w-[260px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] min-h-[calc(100vh-3.5rem)] sticky top-14 self-start max-h-[calc(100vh-3.5rem)]">
-      <nav className="flex-1 overflow-y-auto scrollbar-thin p-3 pt-4">
+    <aside className="hidden lg:flex w-[260px] shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-subtle)] min-h-0 h-full overflow-hidden">
+      <nav className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain scrollbar-thin p-3 pt-4">
         {NAV_SECTIONS.map((section) => {
           const sectionHasCurrentPage = section.items.some((i) => i.slug === pathSlug);
           return (
@@ -33,15 +35,15 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={() => toggle(section.id)}
-                className={`flex w-full items-center justify-between px-2 py-2 text-left text-[13px] font-medium outline-none focus-visible:ring-0 border-0 rounded-none ring-0 shadow-none active:bg-transparent hover:bg-[var(--color-bg-muted)]/40 ${
+                className={`flex w-full items-center justify-between px-2 py-2 text-left text-[13px] font-medium outline-none focus-visible:outline-none border-0 rounded-none shadow-none bg-transparent active:bg-transparent ${
                   sectionHasCurrentPage
                     ? 'text-[var(--color-text-secondary)]'
                     : 'text-[var(--color-text-tertiary)]'
-                }`}
+                } hover:text-[var(--color-text-secondary)]`}
               >
                 {section.label}
                 <motion.span animate={{ rotate: open[section.id] ? 0 : -90 }} transition={{ duration: 0.15 }}>
-                  <ChevronDown size={14} className="text-[var(--color-text-tertiary)] opacity-80" />
+                  <ChevronDown size={14} className="text-[var(--color-text-tertiary)] opacity-90" />
                 </motion.span>
               </button>
               <AnimatePresence initial={false}>
@@ -59,10 +61,14 @@ export function Sidebar() {
                         <li key={item.slug}>
                           <Link
                             to={`/docs/${item.slug}`}
-                            className={`block rounded-md px-2.5 py-1.5 text-[14px] leading-snug transition-colors outline-none focus-visible:ring-0 ring-0 shadow-none active:opacity-90 ${
+                            onClick={() => {
+                              const el = mainScrollRef.current;
+                              if (el) el.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                            }}
+                            className={`block px-2.5 py-1.5 text-[14px] leading-snug transition-colors outline-none focus-visible:outline-none rounded-none border-0 shadow-none bg-transparent ${
                               active
-                                ? 'bg-[var(--color-text)] text-[var(--color-bg)] font-medium'
-                                : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-bg-muted)]/50 hover:text-[var(--color-text-secondary)]'
+                                ? 'text-[var(--color-text)] font-semibold'
+                                : 'text-[var(--color-text-secondary)] font-normal hover:text-[var(--color-text)]'
                             }`}
                           >
                             {item.title}

@@ -1,39 +1,29 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type RefObject } from 'react';
 import type { TocHeading } from '@/lib/headings';
 
+/** Reading line from viewport top (sticky header height). */
 const READ_LINE_PX = 88;
-const BOTTOM_PIN_PX = 120;
-const LAST_BLOCK_TAIL_PX = 72;
 
-function documentScrollHeight(): number {
-  const { documentElement: de, body } = document;
-  return Math.max(de.scrollHeight, de.clientHeight, body?.scrollHeight ?? 0, body?.clientHeight ?? 0);
+/** Y position of element top relative to scroll container content (for ordering). */
+function offsetTopInScroller(el: HTMLElement, scroller: HTMLElement | null): number {
+  if (!scroller) {
+    const r = el.getBoundingClientRect();
+    return r.top + window.scrollY;
+  }
+  const er = el.getBoundingClientRect();
+  const sr = scroller.getBoundingClientRect();
+  return er.top - sr.top + scroller.scrollTop;
 }
 
-/** Document Y-order — avoids skips when extract order and painted order differ. */
-function sortIdsByDomOrder(ids: string[]): string[] {
+function sortIdsByDomOrder(ids: string[], scroller: HTMLElement | null): string[] {
   const pairs: { id: string; y: number }[] = [];
   for (const id of ids) {
     const el = document.getElementById(id);
     if (!el) continue;
-    pairs.push({ id, y: el.getBoundingClientRect().top + window.scrollY });
+    pairs.push({ id, y: offsetTopInScroller(el, scroller) });
   }
   pairs.sort((a, b) => a.y - b.y);
   return pairs.map((p) => p.id);
-}
-
-function shouldPinToLastHeading(ids: string[], scrollY: number, vh: number, sh: number): boolean {
-  if (ids.length === 0) return false;
-  const lastEl = document.getElementById(ids[ids.length - 1]);
-  if (!lastEl) return scrollY + vh >= sh - BOTTOM_PIN_PX;
-
-  const lastRect = lastEl.getBoundingClientRect();
-  const lastBottomDoc = lastRect.bottom + scrollY;
-  const viewBottom = scrollY + vh;
-
-  if (viewBottom >= sh - BOTTOM_PIN_PX) return true;
-  if (lastRect.height > 0 && viewBottom >= lastBottomDoc - LAST_BLOCK_TAIL_PX) return true;
-  return false;
 }
 
 function activeByReadingLine(sortedIds: string[]): string | null {
@@ -48,7 +38,10 @@ function activeByReadingLine(sortedIds: string[]): string | null {
   return current;
 }
 
-export function useActiveHeading(headings: TocHeading[]): string | null {
+export function useActiveHeading(
+  headings: TocHeading[],
+  scrollRootRef: RefObject<HTMLElement | null>
+): string | null {
   const ids = useMemo(() => headings.map((h) => h.id), [headings]);
   const idKey = useMemo(() => ids.join('\0'), [ids]);
 
@@ -65,17 +58,9 @@ export function useActiveHeading(headings: TocHeading[]): string | null {
     }
 
     const flush = () => {
-      const scrollY = window.scrollY;
-      const vh = window.innerHeight;
-      const sh = documentScrollHeight();
-      const sorted = sortIdsByDomOrder(ids);
+      const root = scrollRootRef.current;
+      const sorted = sortIdsByDomOrder(ids, root);
       if (sorted.length === 0) return;
-
-      if (shouldPinToLastHeading(sorted, scrollY, vh, sh)) {
-        const last = sorted[sorted.length - 1];
-        setActive((p) => (p === last ? p : last));
-        return;
-      }
 
       const next = activeByReadingLine(sorted);
       if (next) setActive((p) => (p === next ? p : next));
@@ -94,36 +79,40 @@ export function useActiveHeading(headings: TocHeading[]): string | null {
 
     schedule();
 
+    const root = scrollRootRef.current;
+    const scrollTarget: HTMLElement | Window = root ?? window;
+    scrollTarget.addEventListener('scroll', schedule, { passive: true, capture: true });
+    window.addEventListener('resize', schedule);
+
     const observers: IntersectionObserver[] = [];
+    const ioRoot = root ?? null;
     for (const id of ids) {
       const el = document.getElementById(id);
       if (!el) continue;
       const obs = new IntersectionObserver(schedule, {
-        root: null,
+        root: ioRoot,
         rootMargin: `-${READ_LINE_PX}px 0px -45% 0px`,
-        threshold: [0, 0.05, 0.1, 0.25, 0.5, 0.75, 1],
+        threshold: [0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.65, 0.8, 1],
       });
       obs.observe(el);
       observers.push(obs);
     }
 
-    window.addEventListener('scroll', schedule, { passive: true, capture: true });
-    window.addEventListener('resize', schedule);
     const ro = new ResizeObserver(schedule);
+    if (root) ro.observe(root);
     ro.observe(document.documentElement);
-    if (document.body) ro.observe(document.body);
     const mo = new MutationObserver(schedule);
     mo.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['id', 'class'] });
 
     return () => {
       cancelAnimationFrame(raf);
-      observers.forEach((o) => o.disconnect());
-      window.removeEventListener('scroll', schedule, { capture: true });
+      scrollTarget.removeEventListener('scroll', schedule, { capture: true });
       window.removeEventListener('resize', schedule);
+      observers.forEach((o) => o.disconnect());
       ro.disconnect();
       mo.disconnect();
     };
-  }, [idKey, ids]);
+  }, [idKey, ids, scrollRootRef]);
 
   return active;
 }

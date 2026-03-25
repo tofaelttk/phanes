@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { NAV_SECTIONS } from '@/config/navigation';
+import { useMainScrollRef } from '@/context/MainScrollContext';
 
 type Props = {
   open: boolean;
@@ -9,6 +10,7 @@ type Props = {
 };
 
 export function MobileDrawer({ open, onClose }: Props) {
+  const mainScrollRef = useMainScrollRef();
   const loc = useLocation();
   const pathSlug = loc.pathname.replace(/^\/docs\/?/, '') || 'overview';
 
@@ -56,7 +58,11 @@ export function MobileDrawer({ open, onClose }: Props) {
                         <li key={item.slug}>
                           <Link
                             to={`/docs/${item.slug}`}
-                            onClick={onClose}
+                            onClick={() => {
+                              onClose();
+                              const el = mainScrollRef.current;
+                              if (el) el.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                            }}
                             className={`block rounded-md px-3 py-2 text-[14px] ${
                               active
                                 ? 'bg-[var(--color-bg-subtle)] text-[var(--color-text)] font-medium'

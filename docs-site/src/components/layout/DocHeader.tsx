@@ -43,7 +43,7 @@ export function DocHeader({ onOpenMobileNav }: Props) {
   );
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/90 backdrop-blur-md">
+    <header className="shrink-0 z-50 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur-md">
       <div className="flex flex-col lg:grid lg:grid-cols-[260px_minmax(0,1fr)] lg:items-stretch min-w-0">
         <div className="flex h-14 shrink-0 items-center gap-2 px-3 lg:border-r border-[var(--color-border)] min-w-0">
           <button
