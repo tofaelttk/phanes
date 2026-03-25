@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+/* Light (default tokens) */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+
+  --color-bg: #ffffff;
+  --color-bg-subtle: #f7f8f9;
+  --color-bg-muted: #f0f1f3;
+  --color-border: #e8e8ec;
+  --color-border-strong: #d0d1d6;
+
+  --color-text: #23252a;
+  --color-text-secondary: #5c5f66;
+  --color-text-tertiary: #8a8f98;
+
+  --color-accent: #5e6ad2;
+  --color-accent-hover: #4e5ac0;
+  --color-link: #3751f5;
+}
+
+/* Dark — documentation-style high contrast */
+html.dark {
+  --color-bg: #000000;
+  --color-bg-subtle: #0a0a0b;
+  --color-bg-muted: #18181b;
+  --color-border: #27272a;
+  --color-border-strong: #3f3f46;
+
+  --color-text: #fafafa;
+  --color-text-secondary: #a1a1aa;
+  --color-text-tertiary: #71717a;
+
+  --color-accent: #a3a3a3;
+  --color-accent-hover: #d4d4d4;
+  --color-link: #a3a3a3;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    @apply bg-[var(--color-bg)] text-[var(--color-text)] font-sans text-[15px] leading-relaxed antialiased;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 3px;
+  }
+}
+
+.doc-prose h1 {
+  @apply text-3xl font-semibold tracking-tight text-[var(--color-text)] mt-0 mb-6;
+  letter-spacing: -0.02em;
+}
+.doc-prose h2 {
+  @apply text-xl font-semibold text-[var(--color-text)] mt-12 mb-4 scroll-mt-28 border-b border-[var(--color-border)] pb-2;
+}
+.doc-prose h3 {
+  @apply text-lg font-semibold text-[var(--color-text)] mt-8 mb-3 scroll-mt-28;
+}
+.doc-prose h4 {
+  @apply text-base font-semibold text-[var(--color-text)] mt-6 mb-2 scroll-mt-28;
+}
+.doc-prose h5 {
+  @apply text-[15px] font-semibold text-[var(--color-text)] mt-5 mb-2 scroll-mt-28;
+}
+.doc-prose h6 {
+  @apply text-sm font-semibold text-[var(--color-text-secondary)] mt-4 mb-2 uppercase tracking-wide scroll-mt-28;
+}
+.doc-prose p {
+  @apply text-[var(--color-text-secondary)] mb-4 leading-[1.65];
+}
+.doc-prose ul,
+.doc-prose ol {
+  @apply text-[var(--color-text-secondary)] mb-4 pl-6 space-y-2 leading-[1.65];
+}
+.doc-prose li::marker {
+  color: var(--color-text-tertiary);
+}
+.doc-prose a:not(.doc-heading-permalink) {
+  @apply text-[var(--color-link)] underline-offset-2 hover:underline font-medium;
+}
+.doc-prose strong {
+  @apply text-[var(--color-text)] font-semibold;
+}
+.doc-prose hr {
+  @apply border-[var(--color-border)] my-10;
+}
+.doc-prose table {
+  @apply w-full text-sm border-collapse my-6;
+}
+.doc-prose th {
+  @apply text-left text-[var(--color-text)] font-semibold border border-[var(--color-border)] bg-[var(--color-bg-subtle)] px-3 py-2;
+}
+.doc-prose td {
+  @apply border border-[var(--color-border)] px-3 py-2 text-[var(--color-text-secondary)];
+}
+.doc-prose blockquote {
+  @apply border-l-[3px] border-[var(--color-border-strong)] pl-4 text-[var(--color-text-secondary)] my-6 not-italic;
+}
+.doc-prose code:not(pre code) {
+  @apply font-mono text-[13px] px-1.5 py-0.5 rounded bg-[var(--color-bg-muted)] text-[var(--color-text)] border border-[var(--color-border)];
+}
