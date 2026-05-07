@@ -1,7 +1,7 @@
 """
 AEOS Immutable Ledger
 
-Append-only, Merkle-proven audit trail for every action in the agent economy.
+Append-only, Merkle-proven audit trail for every action in the agent.
 Every identity creation, contract, transaction, dispute, and delegation
 is recorded here with cryptographic proof of ordering and integrity.
 
